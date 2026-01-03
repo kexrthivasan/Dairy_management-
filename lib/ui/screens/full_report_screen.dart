@@ -157,8 +157,10 @@ class _FullReportScreenState extends State<FullReportScreen> {
             child: Column(
               children: [
                 // Filter Chips
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  alignment: WrapAlignment.center,
                   children: [
                     _FilterChip(
                       label: 'Recent',
@@ -705,12 +707,15 @@ class _ExpenseCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              "- Rs.${entry.amount.toStringAsFixed(0)}",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-                fontSize: 16,
+            Flexible(
+              child: Text(
+                "- Rs.${entry.amount.toStringAsFixed(0)}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                  fontSize: 16,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),

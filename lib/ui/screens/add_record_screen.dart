@@ -131,9 +131,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        DateFormat('MMM dd, yyyy').format(_selectedDate),
-                        style: theme.textTheme.headlineSmall,
+                      Expanded(
+                        child: Text(
+                          DateFormat('MMM dd, yyyy').format(_selectedDate),
+                          style: theme.textTheme.headlineSmall,
+                        ),
                       ),
                       const Icon(Icons.calendar_today, size: 30),
                     ],

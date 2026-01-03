@@ -13,8 +13,37 @@ import 'full_report_screen.dart';
 
 import '../../features/analytics/screens/analytics_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _showAnimation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Problem 2: Move Hive.openBox() calls to splash/home screen using async microtask
+    // Also init() makes sure we don't double-init if not needed.
+    Future.microtask(() {
+      if (mounted) {
+        context.read<DairyProvider>().init();
+        context.read<ExpenseProvider>().init();
+      }
+    });
+
+    // Delay animation/heavy widget loading
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _showAnimation = true;
+        });
+      }
+    });
+  }
 
   void _showPriceDialog(BuildContext context) {
     final dairyProvider = Provider.of<DairyProvider>(context, listen: false);
@@ -81,9 +110,9 @@ class HomeScreen extends StatelessWidget {
         builder: (context, provider, child) {
           final expenseProvider = Provider.of<ExpenseProvider>(context);
 
-          if (provider.isLoading || expenseProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          // We don't block the WHOLE UI if loading, just maybe Show loading if empty?
+          // Requirement: "App must show first screen immediately"
+          // So even if loading, show structure.
 
           // Calculate Monthly Totals
           final now = DateTime.now();
@@ -108,12 +137,15 @@ class HomeScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.only(bottom: 20),
             children: [
-              // 1. Animated Cow Header
+              // 1. Animated Cow Header (Lazy Loaded)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const AnimatedCowHeader(),
+                    if (_showAnimation)
+                      const AnimatedCowHeader()
+                    else
+                      const SizedBox(height: 150, width: 150),
                     const SizedBox(height: 10),
                     const Text(
                       "Welcome!",
@@ -144,23 +176,29 @@ class HomeScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _SummaryItem(
-                            label: "Milk (L)",
-                            value: totalLiters.toStringAsFixed(1),
-                            icon: Icons.water_drop,
-                            color: Colors.blue,
+                          Expanded(
+                            child: _SummaryItem(
+                              label: "Milk (L)",
+                              value: totalLiters.toStringAsFixed(1),
+                              icon: Icons.water_drop,
+                              color: Colors.blue,
+                            ),
                           ),
-                          _SummaryItem(
-                            label: "Income",
-                            value: "₹${totalIncome.toStringAsFixed(0)}",
-                            icon: Icons.currency_rupee,
-                            color: Colors.green,
+                          Expanded(
+                            child: _SummaryItem(
+                              label: "Income",
+                              value: "₹${totalIncome.toStringAsFixed(0)}",
+                              icon: Icons.currency_rupee,
+                              color: Colors.green,
+                            ),
                           ),
-                          _SummaryItem(
-                            label: "Expense",
-                            value: "₹${totalExpense.toStringAsFixed(0)}",
-                            icon: Icons.money_off,
-                            color: Colors.red,
+                          Expanded(
+                            child: _SummaryItem(
+                              label: "Expense",
+                              value: "₹${totalExpense.toStringAsFixed(0)}",
+                              icon: Icons.money_off,
+                              color: Colors.red,
+                            ),
                           ),
                         ],
                       ),
@@ -255,7 +293,12 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               // 4. List
-              if (provider.records.isEmpty)
+              if (provider.isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (provider.records.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: Center(
@@ -266,7 +309,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 )
               else
-                ...provider.records.map((record) {
+                ...provider.records.take(5).map((record) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: MilkEntryCard(

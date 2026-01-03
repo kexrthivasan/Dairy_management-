@@ -15,9 +15,13 @@ class ExpenseProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  bool _isInitialized = false;
+
   Future<void> init() async {
+    if (_isInitialized) return;
     await _repository.init();
     await loadEntries();
+    _isInitialized = true;
   }
 
   Future<void> loadEntries() async {

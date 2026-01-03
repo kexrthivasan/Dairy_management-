@@ -24,9 +24,13 @@ class DairyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isInitialized = false;
+
   Future<void> init() async {
+    if (_isInitialized) return;
     await _repository.init();
     await loadRecords();
+    _isInitialized = true;
   }
 
   Future<void> loadRecords() async {

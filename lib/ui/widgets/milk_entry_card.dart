@@ -35,11 +35,15 @@ class MilkEntryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    dateStr,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
+                  Expanded(
+                    child: Text(
+                      dateStr,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
+                      overflow: TextOverflow
+                          .ellipsis, // Ensure it truncates if somehow still too big
                     ),
                   ),
                   IconButton(

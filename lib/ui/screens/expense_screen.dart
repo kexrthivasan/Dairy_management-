@@ -55,12 +55,15 @@ class ExpenseScreen extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        trailing: Text(
-                          "- Rs.${entry.amount.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                        trailing: Flexible(
+                          child: Text(
+                            "- Rs.${entry.amount.toStringAsFixed(0)}",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         onTap: () => _showEditDialog(context, entry),

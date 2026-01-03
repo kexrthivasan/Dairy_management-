@@ -31,8 +31,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DairyProvider()..init()),
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()..init()),
+        ChangeNotifierProvider(create: (_) => DairyProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: MaterialApp(
         title: 'Dairy Manager',
