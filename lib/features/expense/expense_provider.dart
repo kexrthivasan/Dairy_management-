@@ -186,4 +186,11 @@ class ExpenseProvider extends ChangeNotifier {
     filtered.sort((a, b) => b.date.compareTo(a.date));
     return filtered;
   }
+
+  /// Calculates total expense for a specific month using ALL records.
+  double getMonthlyTotal(DateTime date) {
+    return _allEntries
+        .where((e) => e.date.year == date.year && e.date.month == date.month)
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
 }

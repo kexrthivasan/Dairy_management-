@@ -114,25 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
           // Requirement: "App must show first screen immediately"
           // So even if loading, show structure.
 
-          // Calculate Monthly Totals
+          // Calculate Monthly Totals via Providers (ensures we check ALL records, ignoring filters)
           final now = DateTime.now();
-          final currentMonthEntries = provider.records.where((r) {
-            return r.date.year == now.year && r.date.month == now.month;
-          });
-          final currentMonthExpenses = expenseProvider.entries.where((e) {
-            return e.date.year == now.year && e.date.month == now.month;
-          });
-
-          final totalLiters = currentMonthEntries.fold(
-            0.0,
-            (sum, e) => sum + e.totalYield,
-          );
-          final totalIncome =
-              totalLiters * provider.pricePerLiter; // Use manual price
-          final totalExpense = currentMonthExpenses.fold(
-            0.0,
-            (sum, e) => sum + e.amount,
-          );
+          final totalLiters = provider.getMonthlyTotal(now);
+          final totalIncome = totalLiters * provider.pricePerLiter;
+          final totalExpense = expenseProvider.getMonthlyTotal(now);
 
           return ListView(
             padding: const EdgeInsets.only(bottom: 20),
@@ -178,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: _SummaryItem(
-                              label: "Milk (L)",
+                              label: "Current Month (L)",
                               value: totalLiters.toStringAsFixed(1),
                               icon: Icons.water_drop,
                               color: Colors.blue,

@@ -180,4 +180,11 @@ class DairyProvider extends ChangeNotifier {
     filtered.sort((a, b) => a.date.compareTo(b.date)); // Ascending for report?
     return filtered;
   }
+
+  /// Calculates total milk for a specific month using ALL records (ignoring current filter).
+  double getMonthlyTotal(DateTime date) {
+    return _allRecords
+        .where((r) => r.date.year == date.year && r.date.month == date.month)
+        .fold(0.0, (sum, r) => sum + r.totalYield);
+  }
 }
