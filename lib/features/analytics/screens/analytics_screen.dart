@@ -4,7 +4,7 @@ import '../analytics_service.dart';
 
 import '../../expense/expense_provider.dart';
 import '../../../logic/providers/dairy_provider.dart';
-import '../widgets/daily_trend_chart.dart';
+
 import '../widgets/monthly_bar_chart.dart';
 import '../widgets/morning_evening_chart.dart';
 import '../widgets/income_expense_chart.dart';
@@ -67,7 +67,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            MonthlyMilkTrendChart(data: monthlyTotal),
             const SizedBox(height: 16),
             MonthlyBarChart(data: monthlyTotal),
             const SizedBox(height: 16),

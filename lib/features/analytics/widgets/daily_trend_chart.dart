@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/themes/app_theme.dart';
+import '../../../data/models/milk_entry.dart';
+import 'package:intl/intl.dart';
 
-class MonthlyMilkTrendChart extends StatelessWidget {
-  final Map<String, double> data; // Key: Month, Value: Total
+class DailyMilkTrendChart extends StatelessWidget {
+  final List<MilkEntry> data; // Sorted ASC
 
-  const MonthlyMilkTrendChart({super.key, required this.data});
+  const DailyMilkTrendChart({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) return const SizedBox();
-    final keys = data.keys.toList();
-    final values = data.values.toList();
 
     return Card(
       child: Padding(
@@ -19,7 +19,7 @@ class MonthlyMilkTrendChart extends StatelessWidget {
         child: Column(
           children: [
             const Text(
-              "Monthly Milk Trend",
+              "Daily Milk Trend (Last 30 Days)",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
@@ -38,13 +38,15 @@ class MonthlyMilkTrendChart extends StatelessWidget {
                         reservedSize: 32,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
-                          if (index >= 0 && index < keys.length) {
-                            // Show every 2nd or 3rd if too many?
-                            // For now show all as months are few usually
+                          if (index >= 0 && index < data.length) {
+                            // Show every 5th roughly
+                            if (data.length > 7 &&
+                                index % (data.length ~/ 5) != 0)
+                              return const SizedBox();
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                keys[index].split(' ')[0], // Show Jan
+                                DateFormat('dd/MM').format(data[index].date),
                                 style: const TextStyle(fontSize: 14),
                               ),
                             );
@@ -70,17 +72,19 @@ class MonthlyMilkTrendChart extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: List.generate(
-                        keys.length,
-                        (i) => FlSpot(i.toDouble(), values[i]),
+                        data.length,
+                        (i) => FlSpot(i.toDouble(), data[i].totalYield),
                       ),
                       isCurved: true,
                       color: AppTheme.primaryGreen,
                       barWidth: 4,
                       isStrokeCapRound: true,
-                      dotData: const FlDotData(show: true),
+                      dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+                        color: AppTheme.primaryGreen.withValues(
+                          alpha: 0.2,
+                        ), // Updated for latest Flutter
                       ),
                     ),
                   ],
