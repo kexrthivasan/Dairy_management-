@@ -47,6 +47,7 @@ class IncomeExpenseChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        reservedSize: 40,
                         getTitlesWidget: (value, meta) {
                           switch (value.toInt()) {
                             case 0:

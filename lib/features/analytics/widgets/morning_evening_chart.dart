@@ -61,16 +61,26 @@ class MorningEveningPieChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            const Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
               children: [
-                Icon(Icons.wb_sunny, color: Colors.orangeAccent),
-                SizedBox(width: 4),
-                Text("Morning"),
-                SizedBox(width: 16),
-                Icon(Icons.nightlight_round, color: Colors.indigoAccent),
-                SizedBox(width: 4),
-                Text("Evening"),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.wb_sunny, color: Colors.orangeAccent),
+                    SizedBox(width: 4),
+                    Text("Morning"),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.nightlight_round, color: Colors.indigoAccent),
+                    SizedBox(width: 4),
+                    Text("Evening"),
+                  ],
+                ),
               ],
             ),
           ],
