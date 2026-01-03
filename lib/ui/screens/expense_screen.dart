@@ -55,16 +55,27 @@ class ExpenseScreen extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        trailing: Flexible(
-                          child: Text(
-                            "- Rs.${entry.amount.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "- Rs.${entry.amount.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () =>
+                                  _confirmDelete(context, provider, entry),
+                            ),
+                          ],
                         ),
                         onTap: () => _showEditDialog(context, entry),
                         onLongPress: () =>

@@ -57,7 +57,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     // For now, I will use what is available. If filter is active, analytics reflect filter.
 
     // Prepare Data
-    final dailyTrend = _service.getDailyTrend(allMilk);
+
     final monthlyTotal = _service.getMonthlyTotalMilk(allMilk);
     final split = _service.getMorningVsEvening(allMilk);
 
@@ -67,7 +67,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            DailyMilkTrendChart(data: dailyTrend),
+            MonthlyMilkTrendChart(data: monthlyTotal),
             const SizedBox(height: 16),
             MonthlyBarChart(data: monthlyTotal),
             const SizedBox(height: 16),
