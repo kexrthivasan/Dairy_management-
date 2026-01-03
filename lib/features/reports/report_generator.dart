@@ -142,6 +142,33 @@ class ReportGenerator {
   pw.Widget _buildMilkTable(List<MilkEntry> records, double price) {
     if (records.isEmpty) return pw.Text("No milk records for this period.");
 
+    // Calculate totals
+    double sumMilk = 0;
+    for (var r in records) {
+      sumMilk += r.totalYield;
+    }
+    double sumAmount = sumMilk * price;
+
+    final data = records.map((r) {
+      final amount = r.totalYield * price;
+      return [
+        DateFormat('dd-MMM-yyyy').format(r.date),
+        r.morningMilk.toStringAsFixed(1),
+        r.eveningMilk.toStringAsFixed(1),
+        r.totalYield.toStringAsFixed(1),
+        amount.toStringAsFixed(1),
+      ];
+    }).toList();
+
+    // Add Total Row
+    data.add([
+      'TOTAL',
+      '',
+      '',
+      sumMilk.toStringAsFixed(1),
+      sumAmount.toStringAsFixed(1),
+    ]);
+
     return pw.Table.fromTextArray(
       border: pw.TableBorder.all(color: PdfColors.grey300),
       headerStyle: pw.TextStyle(
@@ -151,16 +178,7 @@ class ReportGenerator {
       headerDecoration: const pw.BoxDecoration(color: PdfColors.green),
       cellAlignment: pw.Alignment.centerRight,
       headers: ['Date', 'Morn(L)', 'Eve(L)', 'Tot(L)', 'Amt'],
-      data: records.map((r) {
-        final amount = r.totalYield * price;
-        return [
-          DateFormat('dd-MMM').format(r.date),
-          r.morningMilk.toStringAsFixed(1),
-          r.eveningMilk.toStringAsFixed(1),
-          r.totalYield.toStringAsFixed(1),
-          amount.toStringAsFixed(1),
-        ];
-      }).toList(),
+      data: data,
       columnWidths: {
         0: const pw.FlexColumnWidth(2), // Date
         1: const pw.FlexColumnWidth(1),
@@ -173,6 +191,21 @@ class ReportGenerator {
 
   pw.Widget _buildExpenseTable(List<ExpenseEntry> records) {
     if (records.isEmpty) return pw.Container(); // Or empty text
+
+    // Calculate total
+    double sumExpense = records.fold(0, (sum, e) => sum + e.amount);
+
+    final data = records.map((e) {
+      return [
+        DateFormat('dd-MMM-yyyy').format(e.date),
+        e.category.name.toUpperCase(),
+        e.notes ?? '',
+        e.amount.toStringAsFixed(1),
+      ];
+    }).toList();
+
+    // Add Total Row
+    data.add(['TOTAL', '', '', sumExpense.toStringAsFixed(1)]);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -191,14 +224,7 @@ class ReportGenerator {
           headerDecoration: const pw.BoxDecoration(color: PdfColors.red700),
           cellAlignment: pw.Alignment.centerLeft,
           headers: ['Date', 'Category', 'Notes', 'Amount'],
-          data: records.map((e) {
-            return [
-              DateFormat('dd-MMM').format(e.date),
-              e.category.name.toUpperCase(),
-              e.notes ?? '',
-              e.amount.toStringAsFixed(1),
-            ];
-          }).toList(),
+          data: data,
           columnWidths: {
             0: const pw.FlexColumnWidth(1.5),
             1: const pw.FlexColumnWidth(1.5),
