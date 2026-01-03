@@ -158,9 +158,9 @@ class ReportGenerator {
       final amount = r.totalYield * price;
       return [
         DateFormat('dd-MMM-yyyy').format(r.date),
-        r.morningMilk.toStringAsFixed(1),
-        r.eveningMilk.toStringAsFixed(1),
-        r.totalYield.toStringAsFixed(1),
+        r.morningMilk.toStringAsFixed(3),
+        r.eveningMilk.toStringAsFixed(3),
+        r.totalYield.toStringAsFixed(3),
         amount.toStringAsFixed(1),
       ];
     }).toList();
@@ -168,9 +168,9 @@ class ReportGenerator {
     // Add Total Row
     data.add([
       'TOTAL',
-      sumMorning.toStringAsFixed(1),
-      sumEvening.toStringAsFixed(1),
-      sumMilk.toStringAsFixed(1),
+      sumMorning.toStringAsFixed(3),
+      sumEvening.toStringAsFixed(3),
+      sumMilk.toStringAsFixed(3),
       sumAmount.toStringAsFixed(1),
     ]);
 

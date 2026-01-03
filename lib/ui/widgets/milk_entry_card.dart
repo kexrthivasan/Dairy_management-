@@ -66,19 +66,19 @@ class MilkEntryCard extends StatelessWidget {
                   _buildDataColumn(
                     context,
                     'Morning',
-                    '${record.morningMilk} L',
+                    '${record.morningMilk.toStringAsFixed(3)} L',
                     Icons.wb_sunny_outlined,
                   ),
                   _buildDataColumn(
                     context,
                     'Evening',
-                    '${record.eveningMilk} L',
+                    '${record.eveningMilk.toStringAsFixed(3)} L',
                     Icons.nightlight_round,
                   ),
                   _buildDataColumn(
                     context,
                     'Total',
-                    '${record.totalYield} L',
+                    '${record.totalYield.toStringAsFixed(3)} L',
                     Icons.water_drop,
                     isTotal: true,
                   ),

@@ -164,8 +164,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: _SummaryItem(
-                              label: "Current Month (L)",
-                              value: totalLiters.toStringAsFixed(1),
+                              label: "Milk (L)",
+                              value: totalLiters.toStringAsFixed(3),
                               icon: Icons.water_drop,
                               color: Colors.blue,
                             ),
