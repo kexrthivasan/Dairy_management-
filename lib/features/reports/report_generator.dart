@@ -144,8 +144,13 @@ class ReportGenerator {
 
     // Calculate totals
     double sumMilk = 0;
+    double sumMorning = 0;
+    double sumEvening = 0;
+
     for (var r in records) {
       sumMilk += r.totalYield;
+      sumMorning += r.morningMilk;
+      sumEvening += r.eveningMilk;
     }
     double sumAmount = sumMilk * price;
 
@@ -163,8 +168,8 @@ class ReportGenerator {
     // Add Total Row
     data.add([
       'TOTAL',
-      '',
-      '',
+      sumMorning.toStringAsFixed(1),
+      sumEvening.toStringAsFixed(1),
       sumMilk.toStringAsFixed(1),
       sumAmount.toStringAsFixed(1),
     ]);

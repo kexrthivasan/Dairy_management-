@@ -109,7 +109,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
               const PopupMenuItem(
                 value: 'export_milk',
                 child: ListTile(
-                  leading: Icon(Icons.download),
+                  leading: Icon(Icons.upload),
                   title: Text('Export Milk (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -117,7 +117,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
               const PopupMenuItem(
                 value: 'export_expense',
                 child: ListTile(
-                  leading: Icon(Icons.download),
+                  leading: Icon(Icons.upload),
                   title: Text('Export Expenses (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -125,7 +125,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
               const PopupMenuItem(
                 value: 'import_milk',
                 child: ListTile(
-                  leading: Icon(Icons.upload),
+                  leading: Icon(Icons.download),
                   title: Text('Import Milk (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -133,7 +133,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
               const PopupMenuItem(
                 value: 'import_expense',
                 child: ListTile(
-                  leading: Icon(Icons.upload),
+                  leading: Icon(Icons.download),
                   title: Text('Import Expenses (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -544,7 +544,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        "Selected: ${DateFormat('dd/MM').format(customStart!)} - ${DateFormat('dd/MM').format(customEnd!)}",
+                        "Selected: ${DateFormat('dd/MM/yyyy').format(customStart!)} - ${DateFormat('dd/MM/yyyy').format(customEnd!)}",
                       ),
                     ),
                 ],
@@ -619,9 +619,9 @@ class _FullReportScreenState extends State<FullReportScreen> {
                       milkRecords: milkList,
                       expenseRecords: expenseList,
                       pricePerLiter: price,
-                      periodLabel: filterType == "Custom"
-                          ? "${DateFormat('dd/MM').format(start)} - ${DateFormat('dd/MM').format(end)}"
-                          : "$filterType Report",
+                      // Use explicit date range for all report types to be clear
+                      periodLabel:
+                          "${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}",
                       isDownload: true,
                     );
                   },

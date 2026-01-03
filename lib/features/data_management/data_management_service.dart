@@ -13,7 +13,7 @@ class DataManagementService {
   /// Export Milk Data to CSV
   Future<void> exportMilkData(List<MilkEntry> records) async {
     List<List<dynamic>> rows = [
-      ["Date", "Morning Liters", "Evening Liters", "Notes"],
+      ["Date", "Morning (L)", "Evening (L)", "Notes"],
     ];
 
     for (var r in records) {
@@ -32,7 +32,7 @@ class DataManagementService {
   /// Export Expense Data to CSV
   Future<void> exportExpenseData(List<ExpenseEntry> records) async {
     List<List<dynamic>> rows = [
-      ["Date", "Category", "Amount", "Notes"],
+      ["Date", "Category", "Amount (Rs)", "Notes"],
     ];
 
     for (var r in records) {
@@ -70,6 +70,16 @@ class DataManagementService {
     ], text: 'Here is your exported data: $fileName');
   }
 
+  /// Helper to clean string values (remove currency symbols like ₹, Rs, commas)
+  double _cleanNumber(String value) {
+    // Remove non-numeric characters except dot
+    // Also remove common currency symbols specifically if needed, but regex [^0-9.] matches too much?
+    // User might validly have negative numbers? Yes.
+    // Allow 0-9, ., -
+    String cleaned = value.replaceAll(RegExp(r'[^0-9.-]'), '');
+    return double.tryParse(cleaned) ?? 0.0;
+  }
+
   /// Import Milk Data from CSV
   /// Returns a list of entries to be UPSERTED into the database.
   Future<List<MilkEntry>> pickAndParseMilk() async {
@@ -100,8 +110,8 @@ class DataManagementService {
           if (row.length < 3) continue;
 
           final dateStr = row[0].toString();
-          final morning = double.tryParse(row[1].toString()) ?? 0.0;
-          final evening = double.tryParse(row[2].toString()) ?? 0.0;
+          final morning = _cleanNumber(row[1].toString());
+          final evening = _cleanNumber(row[2].toString());
           String? notes = row.length > 3 ? row[3].toString() : null;
 
           final date = DateFormat('yyyy-MM-dd').parse(dateStr);
@@ -152,7 +162,7 @@ class DataManagementService {
 
           final dateStr = row[0].toString();
           final catStr = row[1].toString().toLowerCase();
-          final amount = double.tryParse(row[2].toString()) ?? 0.0;
+          final amount = _cleanNumber(row[2].toString());
           String? notes = row.length > 3 ? row[3].toString() : null;
 
           final date = DateFormat('yyyy-MM-dd').parse(dateStr);
