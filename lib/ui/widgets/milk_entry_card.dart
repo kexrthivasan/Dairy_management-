@@ -17,92 +17,164 @@ class MilkEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dateStr = DateFormat('MMM dd, yyyy (EEEE)').format(record.date);
+    final dateStr = DateFormat('EEEE, MMM dd').format(record.date);
+    final yearStr = DateFormat('yyyy').format(record.date);
 
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Date and Delete
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      dateStr,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Date and Delete
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.calendar_today,
+                            color: theme.primaryColor,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              yearStr,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 26,
+                        color: Colors.redAccent,
                       ),
-                      overflow: TextOverflow
-                          .ellipsis, // Ensure it truncates if somehow still too big
+                      onPressed: onDelete,
+                      tooltip: 'Delete Record',
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 28,
-                      color: Colors.grey,
-                    ),
-                    onPressed: onDelete,
-                    tooltip: 'Delete Record',
-                  ),
-                ],
-              ),
-              const Divider(thickness: 2),
-              const SizedBox(height: 8),
-
-              // Data Rows
-              Row(
-                children: [
-                  _buildDataColumn(
-                    context,
-                    'Morning',
-                    '${record.morningMilk.toStringAsFixed(3)} L',
-                    Icons.wb_sunny_outlined,
-                  ),
-                  _buildDataColumn(
-                    context,
-                    'Evening',
-                    '${record.eveningMilk.toStringAsFixed(3)} L',
-                    Icons.nightlight_round,
-                  ),
-                  _buildDataColumn(
-                    context,
-                    'Total',
-                    '${record.totalYield.toStringAsFixed(3)} L',
-                    Icons.water_drop,
-                    isTotal: true,
-                  ),
-                ],
-              ),
-
-              if (record.notes.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Note: ${record.notes}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+                  ],
                 ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, thickness: 1),
+                const SizedBox(height: 16),
+
+                // Data Rows
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildDataColumn(
+                      context,
+                      'Morning Milk',
+                      '${record.morningMilk.toStringAsFixed(3)} L',
+                      Icons.wb_sunny_rounded,
+                      Colors.orange,
+                    ),
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: Colors.grey.shade200,
+                    ),
+                    _buildDataColumn(
+                      context,
+                      'Evening Milk',
+                      '${record.eveningMilk.toStringAsFixed(3)} L',
+                      Icons.nights_stay_rounded,
+                      Colors.indigo,
+                    ),
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: Colors.grey.shade200,
+                    ),
+                    _buildDataColumn(
+                      context,
+                      'Total Milk',
+                      '${record.totalYield.toStringAsFixed(3)} L',
+                      Icons.water_drop_rounded,
+                      theme.primaryColor,
+                      isTotal: true,
+                    ),
+                  ],
+                ),
+
+                if (record.notes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.notes,
+                          size: 18,
+                          color: Colors.blueGrey.shade400,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            record.notes,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blueGrey.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -113,36 +185,28 @@ class MilkEntryCard extends StatelessWidget {
     BuildContext context,
     String label,
     String value,
-    IconData icon, {
+    IconData icon,
+    Color iconColor, {
     bool isTotal = false,
   }) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: isTotal ? theme.primaryColor : Colors.grey.shade600,
-            size: 28,
+    return Column(
+      children: [
+        Icon(icon, color: iconColor, size: 24),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 16,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+            color: isTotal ? Theme.of(context).primaryColor : Colors.black87,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade700,
-            ),
-          ),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isTotal
-                  ? theme.primaryColor
-                  : theme.textTheme.bodyLarge?.color,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
     );
   }
 }
