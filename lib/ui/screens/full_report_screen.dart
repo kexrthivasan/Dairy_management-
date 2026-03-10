@@ -19,7 +19,7 @@ class FullReportScreen extends StatefulWidget {
 
 class _FullReportScreenState extends State<FullReportScreen> {
   late TextEditingController _priceController;
-  String _currentFilter = 'Recent';
+  String _currentFilter = 'Last Month';
 
   @override
   void initState() {
@@ -38,7 +38,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyFilter('Recent');
+      _applyFilter('Last Month');
     });
   }
 
@@ -51,11 +51,12 @@ class _FullReportScreenState extends State<FullReportScreen> {
     final expenseP = Provider.of<ExpenseProvider>(context, listen: false);
     final now = DateTime.now();
 
-    if (filter == 'Recent') {
-      // Recent = Last 30 Days
-      final start = now.subtract(const Duration(days: 30));
-      dairyP.filterByDateRange(start, now);
-      expenseP.filterByDateRange(start, now);
+    if (filter == 'Last Month') {
+      // Last Month = previous calendar month
+      final lastMonth = DateTime(now.year, now.month - 1, 1);
+      final lastDayOfLastMonth = DateTime(now.year, now.month, 0);
+      dairyP.filterByDateRange(lastMonth, lastDayOfLastMonth);
+      expenseP.filterByDateRange(lastMonth, lastDayOfLastMonth);
     } else if (filter == 'Weekly') {
       dairyP.filterByWeek(now);
       expenseP.filterByWeek(now);
@@ -142,12 +143,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _generatePdf(context, dairyP, expenseP),
-        label: const Text("Generate PDF"),
-        icon: const Icon(Icons.picture_as_pdf),
-        backgroundColor: Colors.green,
-      ),
+      // FAB removed per requirement - PDF generation available via AppBar icon
       body: Column(
         children: [
           // 1. Controls (Filter & Price)
@@ -163,9 +159,9 @@ class _FullReportScreenState extends State<FullReportScreen> {
                   alignment: WrapAlignment.center,
                   children: [
                     _FilterChip(
-                      label: 'Recent',
-                      isSelected: _currentFilter == 'Recent',
-                      onTap: () => _applyFilter('Recent'),
+                      label: 'Last Month',
+                      isSelected: _currentFilter == 'Last Month',
+                      onTap: () => _applyFilter('Last Month'),
                     ),
                     _FilterChip(
                       label: 'Weekly',
@@ -297,7 +293,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
             e.date,
             e.morningMilk,
             e.eveningMilk,
-            e.notes ?? '',
+            e.notes,
           );
           count++;
         }
@@ -484,7 +480,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
     await showDialog(
       context: context,
       builder: (context) {
-        String filterType = "Recent"; // Default
+        String filterType = "LastMonth"; // Default
         DateTime? customStart;
         DateTime? customEnd;
 
@@ -503,8 +499,8 @@ class _FullReportScreenState extends State<FullReportScreen> {
                     isExpanded: true,
                     items: const [
                       DropdownMenuItem(
-                        value: "Recent",
-                        child: Text("Last 30 Days"),
+                        value: "LastMonth",
+                        child: Text("Last Month"),
                       ),
                       DropdownMenuItem(value: "Week", child: Text("This Week")),
                       DropdownMenuItem(
@@ -583,10 +579,10 @@ class _FullReportScreenState extends State<FullReportScreen> {
                           end = now;
                         }
                         break;
-                      case "Recent":
+                      case "LastMonth":
                       default:
-                        start = now.subtract(const Duration(days: 30));
-                        end = now;
+                        start = DateTime(now.year, now.month - 1, 1);
+                        end = DateTime(now.year, now.month, 0);
                         break;
                     }
 
