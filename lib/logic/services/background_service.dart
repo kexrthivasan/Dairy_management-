@@ -56,8 +56,8 @@ class BackgroundService {
     // 1. Initialize Timezone
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
     } catch (e) {
       debugPrint("Timezone initialization failed: $e");
     }
@@ -75,7 +75,9 @@ class BackgroundService {
           android: initializationSettingsAndroid,
           iOS: initializationSettingsIOS,
         );
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(
+      settings: initializationSettings,
+    );
   }
 
   static Future<void> updateBackupTask(
@@ -102,7 +104,7 @@ class BackgroundService {
         constraints: Constraints(
           networkType: NetworkType.connected, // Only when internet available
         ),
-        existingWorkPolicy: ExistingWorkPolicy.replace,
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       );
     } else {
       await Workmanager().cancelByUniqueName("autoBackupTask");
@@ -116,7 +118,7 @@ class BackgroundService {
           .pendingNotificationRequests();
       for (var req in pending) {
         if (req.id >= 100 && req.id <= 130) {
-          await flutterLocalNotificationsPlugin.cancel(req.id);
+          await flutterLocalNotificationsPlugin.cancel(id: req.id);
         }
       }
 
@@ -143,11 +145,11 @@ class BackgroundService {
         }
 
         await flutterLocalNotificationsPlugin.zonedSchedule(
-          100 + i,
-          'Milk Entry Reminder',
-          "Please add today's milk entry.",
-          scheduledTime,
-          const NotificationDetails(
+          id: 100 + i,
+          title: 'Milk Entry Reminder',
+          body: "Please add today's milk entry.",
+          scheduledDate: scheduledTime,
+          notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               'milk_reminder',
               'Milk Reminder',
@@ -156,8 +158,6 @@ class BackgroundService {
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
     } catch (e) {
