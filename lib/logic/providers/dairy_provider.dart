@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/milk_entry.dart';
 import '../../data/repositories/milk_repository.dart';
 import '../services/background_service.dart';
@@ -18,12 +19,21 @@ class DairyProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Price per liter (manual set)
+  // Price per liter (manual set) – persisted to SharedPreferences
   double _pricePerLiter = 30.0;
   double get pricePerLiter => _pricePerLiter;
-  void setPricePerLiter(double price) {
+
+  Future<void> _loadPrice() async {
+    final prefs = await SharedPreferences.getInstance();
+    _pricePerLiter = prefs.getDouble('price_per_liter') ?? 30.0;
+    notifyListeners();
+  }
+
+  Future<void> setPricePerLiter(double price) async {
     _pricePerLiter = price;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('price_per_liter', price);
   }
 
   bool _isInitialized = false;
@@ -31,6 +41,7 @@ class DairyProvider extends ChangeNotifier {
   Future<void> init() async {
     if (_isInitialized) return;
     await _repository.init();
+    await _loadPrice();
     await loadRecords();
     _isInitialized = true;
   }
@@ -76,11 +87,11 @@ class DairyProvider extends ChangeNotifier {
       eveningMilk: evening,
       createdAt: DateTime.now(),
       notes: notes,
+      pricePerLiter: _pricePerLiter, // lock current price into the record
     );
 
     final isUpdate = await _repository.saveRecord(newRecord);
-
-    await loadRecords(); // Reload to refresh UI and re-apply default filter (all)
+    await loadRecords();
     return isUpdate;
   }
 
@@ -158,11 +169,15 @@ class DairyProvider extends ChangeNotifier {
     return totalMilkVolume / _filteredRecords.length;
   }
 
-  /// Calculates Total Income based on dynamic price.
-  /// Price is ephemeral (passed by user in UI) and not stored.
-  /// Formula: Total Milk Volume * Price Per Liter
-  double calculateTotalIncome(double pricePerLiter) {
-    return totalMilkVolume * pricePerLiter;
+  /// Calculates Total Income using pricePerLiter stored in each record.
+  /// If a record has pricePerLiter == 0 (old records), fallback to current price.
+  double calculateTotalIncome(double fallbackPricePerLiter) {
+    return _filteredRecords.fold(0.0, (sum, r) {
+      final price = r.pricePerLiter > 0
+          ? r.pricePerLiter
+          : fallbackPricePerLiter;
+      return sum + r.totalYield * price;
+    });
   }
 
   // --- Exports ---
@@ -200,5 +215,15 @@ class DairyProvider extends ChangeNotifier {
     return _allRecords
         .where((r) => r.date.year == date.year && r.date.month == date.month)
         .fold(0.0, (sum, r) => sum + r.totalYield);
+  }
+
+  /// Calculates total income for a month using per-record price (fallback to current price for old records).
+  double getMonthlyIncome(DateTime date) {
+    return _allRecords
+        .where((r) => r.date.year == date.year && r.date.month == date.month)
+        .fold(0.0, (sum, r) {
+          final price = r.pricePerLiter > 0 ? r.pricePerLiter : _pricePerLiter;
+          return sum + r.totalYield * price;
+        });
   }
 }
