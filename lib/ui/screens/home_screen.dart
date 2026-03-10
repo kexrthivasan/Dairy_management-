@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../logic/providers/dairy_provider.dart';
 import '../widgets/milk_entry_card.dart';
 import '../widgets/footer_widget.dart';
-import '../widgets/animated_cow_header.dart';
 
 import '../../features/expense/expense_provider.dart';
 import 'add_record_screen.dart';
@@ -26,8 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Problem 2: Move Hive.openBox() calls to splash/home screen using async microtask
-    // Also init() makes sure we don't double-init if not needed.
     Future.microtask(() {
       if (mounted) {
         context.read<DairyProvider>().init();
@@ -35,8 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    // Delay animation/heavy widget loading
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() {
           _showAnimation = true;
@@ -55,23 +51,40 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Set Price per Liter'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.attach_money, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Set Price per Liter'),
+            ],
+          ),
           content: TextField(
             controller: priceController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Price',
+            decoration: InputDecoration(
+              labelText: 'Price (₹)',
               hintText: 'Enter price per liter',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
-          actions: <Widget>[
+          actions: [
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
             ),
-            TextButton(
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: const Text('Save'),
               onPressed: () {
                 final newPrice = double.tryParse(priceController.text);
@@ -82,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
                       content: Text('Please enter a valid price.'),
+                      backgroundColor: Colors.redAccent,
                     ),
                   );
                 }
@@ -95,12 +109,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Home Dairy Manager'),
+        title: const Text(
+          'Dairy Manager',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.attach_money, size: 32),
+            icon: const Icon(Icons.currency_rupee, size: 28),
             tooltip: 'Set Price per Liter',
             onPressed: () => _showPriceDialog(context),
           ),
@@ -110,100 +130,155 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, provider, child) {
           final expenseProvider = Provider.of<ExpenseProvider>(context);
 
-          // We don't block the WHOLE UI if loading, just maybe Show loading if empty?
-          // Requirement: "App must show first screen immediately"
-          // So even if loading, show structure.
-
-          // Calculate Monthly Totals via Providers (ensures we check ALL records, ignoring filters)
           final now = DateTime.now();
           final totalLiters = provider.getMonthlyTotal(now);
           final totalIncome = totalLiters * provider.pricePerLiter;
           final totalExpense = expenseProvider.getMonthlyTotal(now);
 
           return ListView(
-            padding: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
-              // 1. Animated Cow Header (Lazy Loaded)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    if (_showAnimation)
-                      const AnimatedCowHeader()
-                    else
-                      const SizedBox(height: 150, width: 150),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Welcome!",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+              // 1. Header with Animation and Summary Box
+              Stack(
+                children: [
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(32),
+                        bottomRight: Radius.circular(32),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Summary Box
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          const BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: Colors.green.shade100,
-                          width: 2,
+                  ),
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 8.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Welcome back!",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  "Overview Dashboard",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Expanded(
-                            child: _SummaryItem(
-                              label: "Milk (L)",
-                              value: totalLiters.toStringAsFixed(3),
-                              icon: Icons.water_drop,
-                              color: Colors.blue,
+                      const SizedBox(height: 16),
+                      // Summary Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOutCubic,
+                          transform: Matrix4.translationValues(
+                            0,
+                            _showAnimation ? 0 : 50,
+                            0,
+                          ),
+                          child: Opacity(
+                            opacity: _showAnimation ? 1.0 : 0.0,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.primaryColor.withOpacity(0.15),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _SummaryItem(
+                                    label: "Milk (L)",
+                                    value: totalLiters.toStringAsFixed(1),
+                                    icon: Icons.water_drop_rounded,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  Container(
+                                    height: 50,
+                                    width: 1,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  _SummaryItem(
+                                    label: "Income",
+                                    value: "₹${totalIncome.toStringAsFixed(0)}",
+                                    icon: Icons.account_balance_wallet_rounded,
+                                    color: Colors.green,
+                                  ),
+                                  Container(
+                                    height: 50,
+                                    width: 1,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  _SummaryItem(
+                                    label: "Expense",
+                                    value:
+                                        "₹${totalExpense.toStringAsFixed(0)}",
+                                    icon: Icons.money_off_rounded,
+                                    color: Colors.redAccent,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Expanded(
-                            child: _SummaryItem(
-                              label: "Income",
-                              value: "₹${totalIncome.toStringAsFixed(0)}",
-                              icon: Icons.currency_rupee,
-                              color: Colors.green,
-                            ),
-                          ),
-                          Expanded(
-                            child: _SummaryItem(
-                              label: "Expense",
-                              value: "₹${totalExpense.toStringAsFixed(0)}",
-                              icon: Icons.money_off,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
+              const SizedBox(height: 32),
 
-              // 2. Quick Actions (Grid of 4 Buttons)
+              // 2. Quick Actions Grid
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      "Quick Actions",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
-                          child: _BigButton(
-                            icon: Icons.water_drop,
+                          child: _ActionCard(
+                            icon: Icons.add_circle,
                             label: "Add Milk",
+                            subtitle: "New entry",
                             color: Colors.blue,
                             onTap: () => Navigator.push(
                               context,
@@ -213,11 +288,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: _BigButton(
-                            icon: Icons.money_off,
+                          child: _ActionCard(
+                            icon: Icons.receipt_long,
                             label: "Expenses",
+                            subtitle: "Track costs",
                             color: Colors.redAccent,
                             onTap: () => Navigator.push(
                               context,
@@ -229,13 +305,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
-                          child: _BigButton(
-                            icon: Icons.analytics,
+                          child: _ActionCard(
+                            icon: Icons.insights_rounded,
                             label: "Analytics",
+                            subtitle: "View charts",
                             color: Colors.purple,
                             onTap: () => Navigator.push(
                               context,
@@ -245,20 +322,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: _BigButton(
-                            icon: Icons.picture_as_pdf,
-                            label: "Report",
+                          child: _ActionCard(
+                            icon: Icons.picture_as_pdf_rounded,
+                            label: "Reports",
+                            subtitle: "Export data",
                             color: Colors.green,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const FullReportScreen(),
-                                ),
-                              );
-                            },
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FullReportScreen(),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -266,31 +342,75 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
 
-              // 3. Recent Records Header
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "Recent Records",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // 3. Recent Records List
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Recent Records",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (provider.records.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FullReportScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text('View All'),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // 4. List
               if (provider.isLoading)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (provider.records.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32.0),
+                Padding(
+                  padding: const EdgeInsets.all(32.0),
                   child: Center(
-                    child: Text(
-                      "No records found.",
-                      style: TextStyle(color: Colors.grey),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.notes,
+                          size: 48,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No milk records found.",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddRecordScreen(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Your First Entry'),
+                        ),
+                      ],
                     ),
                   ),
                 )
@@ -312,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
               const AppFooter(),
             ],
           );
@@ -329,22 +449,29 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Record?'),
         content: const Text(
-          'Are you sure you want to delete this record?',
-          style: TextStyle(fontSize: 18),
+          'Are you sure you want to delete this record?\nThis action cannot be undone.',
+          style: TextStyle(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('CANCEL'),
+            child: const Text('CANCEL', style: TextStyle(color: Colors.grey)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             onPressed: () {
               provider.deleteRecord(date);
               Navigator.pop(ctx);
             },
-            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
+            child: const Text('DELETE'),
           ),
         ],
       ),
@@ -370,63 +497,91 @@ class _SummaryItem extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 28),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: color.withOpacity(0.8),
+            color: Colors.grey.shade800,
           ),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }
 }
 
-class _BigButton extends StatelessWidget {
+class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String subtitle;
   final Color color;
   final VoidCallback onTap;
 
-  const _BigButton({
+  const _ActionCard({
     required this.icon,
     required this.label,
+    required this.subtitle,
     required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      onPressed: onTap,
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: Colors.white),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+    return Material(
+      color: Colors.white,
+      shadowColor: Colors.black.withOpacity(0.05),
+      elevation: 2,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
