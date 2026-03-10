@@ -7,6 +7,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   // All loaded entries (unsorted or raw)
   List<ExpenseEntry> _allEntries = [];
+  List<ExpenseEntry> get allEntries => _allEntries;
 
   // Currently visible entries (filtered & sorted)
   List<ExpenseEntry> _filteredEntries = [];

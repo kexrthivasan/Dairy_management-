@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../data/models/milk_entry.dart';
 import '../../data/repositories/milk_repository.dart';
+import '../services/background_service.dart';
 
 class DairyProvider extends ChangeNotifier {
   final MilkRepository _repository = MilkRepository();
 
   // Master list of all records
   List<MilkEntry> _allRecords = [];
+  List<MilkEntry> get allRecords => _allRecords;
 
   // Filtered list displayed in UI
   List<MilkEntry> _filteredRecords = [];
@@ -47,6 +49,18 @@ class DairyProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+    _updateReminders();
+  }
+
+  void _updateReminders() {
+    final now = DateTime.now();
+    bool hasToday = _allRecords.any(
+      (r) =>
+          r.date.year == now.year &&
+          r.date.month == now.month &&
+          r.date.day == now.day,
+    );
+    BackgroundService.scheduleMilkReminders(hasToday);
   }
 
   // Returns true if it was an UPDATE, false if NEW
