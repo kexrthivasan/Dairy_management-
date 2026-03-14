@@ -1,31 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'core/themes/app_theme.dart';
-import 'data/models/milk_entry.dart';
-import 'data/models/expense_entry.dart';
 import 'presentation/providers/dairy_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'features/expense/expense_provider.dart';
 import 'services/auth_service.dart';
-import 'presentation/screens/main_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/background_service.dart';
+import 'presentation/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-
-  await Hive.initFlutter();
-  Hive.registerAdapter(MilkEntryAdapter());
-  Hive.registerAdapter(ExpenseEntryAdapter());
-  Hive.registerAdapter(ExpenseCategoryAdapter());
-
+  
+  // Minimal initialization before runApp
   final authService = AuthService();
-  await authService.init();
-
-  await BackgroundService.initialize();
-
+  
   runApp(MyApp(authService: authService));
 }
 
@@ -51,10 +38,11 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: const MainScreen(),
+            home: SplashScreen(authService: authService),
           );
         },
       ),
     );
   }
 }
+
