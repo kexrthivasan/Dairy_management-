@@ -19,8 +19,10 @@ class BackupScheduler {
     if (_isRunning) return;
     _isRunning = true;
 
-    // Check immediately on start
-    _checkAndRunPendingBackups();
+    // Delay the initial backup check so it doesn't run during app startup.
+    // This runs 10 seconds after start() is called, which itself is already 
+    // deferred 5 seconds after the first frame — safely out of the critical path.
+    Future.delayed(const Duration(seconds: 10), _checkAndRunPendingBackups);
 
     // Listen for connectivity changes
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {

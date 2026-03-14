@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../services/auth_service.dart';
 import '../../services/background_service.dart';
-import '../../data/models/milk_entry.dart';
-import '../../data/models/expense_entry.dart';
 import 'main_screen.dart';
 
+/// Splash screen shown immediately on app launch.
+/// Dotenv + Hive are already initialized in main() before this widget loads,
+/// so we navigate to MainScreen right away with no blocking work here.
 class SplashScreen extends StatefulWidget {
   final AuthService authService;
 
@@ -24,42 +23,39 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // Perform minimal startup tasks that don't block UI immediately
-    await Future.wait([
-      dotenv.load(fileName: ".env"),
-      Hive.initFlutter(),
-    ]);
-    
-    // Register adapters
-    Hive.registerAdapter(MilkEntryAdapter());
-    Hive.registerAdapter(ExpenseEntryAdapter());
-    Hive.registerAdapter(ExpenseCategoryAdapter());
-    
-    // Auth init
-    await widget.authService.init();
-
-    // Background service (fire and forget after minimal init)
-    BackgroundService.initialize();
-
+    // Navigate immediately — all heavy setup (Hive, dotenv) is done in main()
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     }
+
+    // Auth (signInSilently = network call) and background service run
+    // completely in background AFTER navigation — never blocks UI
+    widget.authService.init();
+    BackgroundService.initialize();
   }
 
   @override
   Widget build(BuildContext context) {
+    // This screen is visible only for a fraction of a second
     return const Scaffold(
+      backgroundColor: Color(0xFF1565C0),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pets, size: 80, color: Colors.blue), // Placeholder icon
-            SizedBox(height: 20),
-            CircularProgressIndicator(),
-            SizedBox(height: 10),
-            Text('Starting Dairy Manager...'),
+            Icon(Icons.water_drop_rounded, size: 80, color: Colors.white),
+            SizedBox(height: 16),
+            Text(
+              'Dairy Manager',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
           ],
         ),
       ),

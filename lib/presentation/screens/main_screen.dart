@@ -23,14 +23,22 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _initBackupScheduler();
+    // Defer heavy background work to after the first frame renders
+    // so the UI appears instantly on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initBackupScheduler();
+    });
   }
 
   void _initBackupScheduler() {
+    if (!mounted) return;
     final authService = Provider.of<AuthService>(context, listen: false);
     final driveService = DriveService(authService);
     _backupScheduler = BackupScheduler(driveService, authService);
-    _backupScheduler!.start();
+    // Delay backup check further so it doesn't compete with UI rendering
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _backupScheduler!.start();
+    });
   }
 
   @override

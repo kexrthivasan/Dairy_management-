@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/milk_entry.dart';
 import '../../data/repositories/milk_repository.dart';
-import '../services/background_service.dart';
+import '../../services/background_service.dart';
 
 class DairyProvider extends ChangeNotifier {
   final MilkRepository _repository = MilkRepository();
