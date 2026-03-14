@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../logic/providers/dairy_provider.dart';
+import '../../presentation/providers/dairy_provider.dart';
 import '../../features/expense/expense_provider.dart';
 
 class MonthlySummaryScreen extends StatefulWidget {
@@ -45,7 +45,7 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
 
           double lastMonthMilk = dairy.getMonthlyTotal(lastMonthDate);
           double lastMonthExpense = expense.getMonthlyTotal(lastMonthDate);
-          double lastMonthIncome = lastMonthMilk * pricePerLiter;
+          double lastMonthIncome = dairy.getMonthlyIncome(lastMonthDate);
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -151,13 +151,26 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
                   final profitLoss = inc - exp;
                   
                   final monthName = DateFormat('MMMM yyyy').format(date);
+                  
+                  // Collect missing dates
+                  int daysInMonth = DateTime(year, month + 1, 0).day;
+                  int limit = (year == now.year && month == now.month) ? now.day : daysInMonth;
+                  final List<DateTime> missingDates = [];
+                  for (int d = 1; d <= limit; d++) {
+                    bool found = dairy.allRecords.any((r) => r.date.year == year && r.date.month == month && r.date.day == d);
+                    if (!found) missingDates.add(DateTime(year, month, d));
+                  }
+
+                  // Use per-record income (accurate per-month pricing)
+                  final incomeAccurate = dairy.getMonthlyIncome(date);
 
                   return _buildEnhancedMonthCard(
                     monthName: monthName,
                     milk: milk,
-                    income: inc,
+                    income: incomeAccurate,
                     expense: exp,
-                    profitLoss: profitLoss,
+                    profitLoss: incomeAccurate - exp,
+                    missingDates: missingDates,
                   );
                 }),
             ],
@@ -195,15 +208,17 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
     required double income,
     required double expense,
     required double profitLoss,
+    required List<DateTime> missingDates,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withOpacity(isDark ? 0.05 : 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -252,6 +267,44 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
                 ),
               ],
             ),
+            if (missingDates.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Missing Milk Entry Days (${missingDates.length})',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.deepOrange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      missingDates.map((d) => DateFormat('dd').format(d)).join(', '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.orange.shade200 : Colors.orange.shade900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             
             // Milk row
@@ -292,9 +345,10 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
     required IconData icon,
     required Color iconColor,
     required String label,
-    required String value,
     required Color valueColor,
+    required String value,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
@@ -312,7 +366,7 @@ class _MonthlySummaryScreenState extends State<MonthlySummaryScreen> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+              color: isDark ? Colors.white60 : Colors.grey[700],
             ),
           ),
         ),

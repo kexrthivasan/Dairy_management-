@@ -3,13 +3,13 @@ import 'package:provider/provider.dart';
 import '../analytics_service.dart';
 
 import '../../expense/expense_provider.dart';
-import '../../../logic/providers/dairy_provider.dart';
+import '../../../presentation/providers/dairy_provider.dart'; // Fixed import
 
 import '../widgets/monthly_bar_chart.dart';
 import '../widgets/morning_evening_chart.dart';
 import '../widgets/income_expense_chart.dart';
 import '../../../animations/cash_animation.dart';
-import '../../../ui/widgets/footer_widget.dart';
+import '../../../presentation/widgets/footer_widget.dart'; // Fixed import
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});

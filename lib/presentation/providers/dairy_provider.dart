@@ -29,11 +29,43 @@ class DairyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setPricePerLiter(double price) async {
-    _pricePerLiter = price;
-    notifyListeners();
+  Future<void> setPricePerLiter(double newPrice) async {
+    final now = DateTime.now();
+    // The "boundary" is the first day of the current month.
+    // Records BEFORE this month → keep their price (or lock 0-price records to old price).
+    // Records IN this month or later → get the new price.
+    final firstDayOfCurrentMonth = DateTime(now.year, now.month, 1);
+
+    bool anyUpdated = false;
+    for (int i = 0; i < _allRecords.length; i++) {
+      final r = _allRecords[i];
+      final recordFirstOfMonth = DateTime(r.date.year, r.date.month, 1);
+
+      if (recordFirstOfMonth.isBefore(firstDayOfCurrentMonth)) {
+        // Historical month: lock to old price if it was 0 (never explicitly set)
+        if (r.pricePerLiter == 0) {
+          await _repository.updateRecordPrice(r, _pricePerLiter);
+          anyUpdated = true;
+        }
+        // Otherwise leave historical prices untouched
+      } else {
+        // Current month or future: apply new price
+        if (r.pricePerLiter != newPrice) {
+          await _repository.updateRecordPrice(r, newPrice);
+          anyUpdated = true;
+        }
+      }
+    }
+
+    _pricePerLiter = newPrice;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('price_per_liter', price);
+    await prefs.setDouble('price_per_liter', newPrice);
+
+    if (anyUpdated) {
+      await loadRecords(); // Reload to reflect updated prices everywhere
+    } else {
+      notifyListeners();
+    }
   }
 
   bool _isInitialized = false;
@@ -81,18 +113,35 @@ class DairyProvider extends ChangeNotifier {
     double evening,
     String notes,
   ) async {
+    // Determine the correct price for this record's month.
+    // If there are already records in that month with an explicit price, use that price.
+    // Otherwise fall back to the current global price.
+    final double priceForMonth = _resolvePriceForMonth(date);
+
     final newRecord = MilkEntry(
       date: date,
       morningMilk: morning,
       eveningMilk: evening,
       createdAt: DateTime.now(),
       notes: notes,
-      pricePerLiter: _pricePerLiter, // lock current price into the record
+      pricePerLiter: priceForMonth,
     );
 
     final isUpdate = await _repository.saveRecord(newRecord);
     await loadRecords();
     return isUpdate;
+  }
+
+  /// Returns the price that should be used for records in the same month as [date].
+  /// Checks existing records for that month first, then falls back to current price.
+  double _resolvePriceForMonth(DateTime date) {
+    final sameMonthRecords = _allRecords.where(
+      (r) => r.date.year == date.year && r.date.month == date.month && r.pricePerLiter > 0,
+    );
+    if (sameMonthRecords.isNotEmpty) {
+      return sameMonthRecords.first.pricePerLiter;
+    }
+    return _pricePerLiter;
   }
 
   Future<void> deleteRecord(DateTime date) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../logic/providers/dairy_provider.dart';
+import '../../presentation/providers/dairy_provider.dart';
 import '../../features/expense/expense_provider.dart';
 import '../../data/models/milk_entry.dart';
 import '../../data/models/expense_entry.dart';
@@ -57,12 +57,15 @@ class _FullReportScreenState extends State<FullReportScreen> {
       final lastDayOfLastMonth = DateTime(now.year, now.month, 0);
       dairyP.filterByDateRange(lastMonth, lastDayOfLastMonth);
       expenseP.filterByDateRange(lastMonth, lastDayOfLastMonth);
-    } else if (filter == 'Weekly') {
+    } else if (filter == 'This Week') {
       dairyP.filterByWeek(now);
       expenseP.filterByWeek(now);
-    } else if (filter == 'Monthly') {
+    } else if (filter == 'This Month') {
       dairyP.filterByMonth(now);
       expenseP.filterByMonth(now);
+    } else if (filter == 'Today') {
+      dairyP.filterBySingleDate(now);
+      expenseP.filterBySingleDate(now);
     }
   }
 
@@ -75,6 +78,44 @@ class _FullReportScreenState extends State<FullReportScreen> {
 
     dairyP.filterByDateRange(start, end);
     expenseP.filterByDateRange(start, end);
+  }
+
+  void _handleRadioChange(String? value) async {
+    if (value == 'Custom Range') {
+      final now = DateTime.now();
+      final picked = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: now,
+        initialDateRange: DateTimeRange(
+          start: now.subtract(const Duration(days: 7)),
+          end: now,
+        ),
+      );
+      if (picked != null) {
+        _applyCustomFilter(picked.start, picked.end);
+        setState(() => _currentFilter = 'Custom Range');
+      }
+    } else if (value != null) {
+      _applyFilter(value);
+    }
+  }
+
+  Widget _buildRadioOption(String title) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Radio<String>(
+          value: title,
+          groupValue: _currentFilter,
+          onChanged: _handleRadioChange,
+        ),
+        GestureDetector(
+          onTap: () => _handleRadioChange(title),
+          child: Text(title),
+        ),
+      ],
+    );
   }
 
   @override
@@ -149,49 +190,21 @@ class _FullReportScreenState extends State<FullReportScreen> {
           // 1. Controls (Filter & Price)
           Container(
             padding: const EdgeInsets.all(12),
-            color: Colors.white,
+            color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Filter Chips
+                // Filter Radio Buttons
+                const Text('Report Filter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  alignment: WrapAlignment.center,
+                  spacing: 4.0,
+                  runSpacing: -8.0,
                   children: [
-                    _FilterChip(
-                      label: 'Last Month',
-                      isSelected: _currentFilter == 'Last Month',
-                      onTap: () => _applyFilter('Last Month'),
-                    ),
-                    _FilterChip(
-                      label: 'Weekly',
-                      isSelected: _currentFilter == 'Weekly',
-                      onTap: () => _applyFilter('Weekly'),
-                    ),
-                    _FilterChip(
-                      label: 'Monthly',
-                      isSelected: _currentFilter == 'Monthly',
-                      onTap: () => _applyFilter('Monthly'),
-                    ),
-                    ActionChip(
-                      avatar: const Icon(Icons.calendar_today, size: 16),
-                      label: const Text('Custom'),
-                      onPressed: () async {
-                        final now = DateTime.now();
-                        final picked = await showDateRangePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate: now,
-                          initialDateRange: DateTimeRange(
-                            start: now.subtract(const Duration(days: 7)),
-                            end: now,
-                          ),
-                        );
-                        if (picked != null) {
-                          _applyCustomFilter(picked.start, picked.end);
-                        }
-                      },
-                    ),
+                    _buildRadioOption('Today'),
+                    _buildRadioOption('This Week'),
+                    _buildRadioOption('This Month'),
+                    _buildRadioOption('Last Month'),
+                    _buildRadioOption('Custom Range'),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -631,26 +644,7 @@ class _FullReportScreenState extends State<FullReportScreen> {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
 
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => onTap(),
-    );
-  }
-}
 
 class _ExpenseCard extends StatelessWidget {
   final ExpenseEntry entry;

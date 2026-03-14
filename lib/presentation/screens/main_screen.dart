@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:home_dairy_manager/ui/screens/home_screen.dart';
-import 'package:home_dairy_manager/ui/screens/expense_screen.dart';
+import 'package:home_dairy_manager/presentation/screens/home_screen.dart';
+import 'package:home_dairy_manager/presentation/screens/expense_screen.dart';
 import 'package:home_dairy_manager/features/analytics/screens/analytics_screen.dart';
-import 'package:home_dairy_manager/ui/screens/monthly_summary_screen.dart';
-import 'package:home_dairy_manager/ui/screens/settings_screen.dart';
-import 'package:home_dairy_manager/logic/services/drive_service.dart';
-import 'package:home_dairy_manager/logic/services/auth_service.dart';
-import 'package:home_dairy_manager/logic/services/backup_scheduler.dart';
+import 'package:home_dairy_manager/presentation/screens/monthly_summary_screen.dart';
+import 'package:home_dairy_manager/presentation/screens/settings_screen.dart';
+import 'package:home_dairy_manager/services/drive_service.dart';
+import 'package:home_dairy_manager/services/auth_service.dart';
+import 'package:home_dairy_manager/services/backup_scheduler.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

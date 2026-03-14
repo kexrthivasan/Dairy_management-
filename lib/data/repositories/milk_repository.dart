@@ -38,12 +38,28 @@ class MilkRepository {
             : old.eveningMilk,
         createdAt: old.createdAt,
         notes: entry.notes.isNotEmpty ? entry.notes : old.notes,
+        pricePerLiter: old.pricePerLiter > 0 ? old.pricePerLiter : entry.pricePerLiter,
       );
       await box.put(key, merged);
     } else {
       await box.put(key, entry);
     }
     return exists; // true if it was an update
+  }
+
+  Future<void> updateRecordPrice(MilkEntry old, double newPrice) async {
+    final box = await _box;
+    final key = MilkEntry.getDateKey(old.date);
+    if (!box.containsKey(key)) return;
+    final merged = MilkEntry(
+      date: old.date,
+      morningMilk: old.morningMilk,
+      eveningMilk: old.eveningMilk,
+      createdAt: old.createdAt,
+      notes: old.notes,
+      pricePerLiter: newPrice,
+    );
+    await box.put(key, merged);
   }
 
   Future<void> deleteRecord(DateTime date) async {

@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import 'core/themes/app_theme.dart';
 import 'data/models/milk_entry.dart';
 import 'data/models/expense_entry.dart';
-import 'logic/providers/dairy_provider.dart';
-import 'logic/providers/theme_provider.dart';
+import 'presentation/providers/dairy_provider.dart';
+import 'presentation/providers/theme_provider.dart';
 import 'features/expense/expense_provider.dart';
-import 'logic/services/auth_service.dart';
-import 'ui/screens/main_screen.dart';
+import 'services/auth_service.dart';
+import 'presentation/screens/main_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'logic/services/background_service.dart';
+import 'services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

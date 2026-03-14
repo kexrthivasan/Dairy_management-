@@ -63,18 +63,21 @@ class AnalyticsService {
     // Process Milk
     for (var r in milkRecords) {
       final key = DateFormat('MMM yy').format(r.date);
-      if (!result.containsKey(key))
+      if (!result.containsKey(key)) {
         result[key] = {"Income": 0.0, "Expense": 0.0};
+      }
 
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : pricePerLiter;
       result[key]!['Income'] =
-          (result[key]!['Income']!) + (r.totalYield * pricePerLiter);
+          (result[key]!['Income']!) + (r.totalYield * actualPrice);
     }
 
     // Process Expense
     for (var e in expenseRecords) {
       final key = DateFormat('MMM yy').format(e.date);
-      if (!result.containsKey(key))
+      if (!result.containsKey(key)) {
         result[key] = {"Income": 0.0, "Expense": 0.0};
+      }
 
       result[key]!['Expense'] = (result[key]!['Expense']!) + e.amount;
     }

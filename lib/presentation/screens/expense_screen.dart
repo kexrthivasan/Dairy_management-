@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../features/expense/expense_provider.dart';
 import '../../data/models/expense_entry.dart';
-import '../widgets/footer_widget.dart';
+
 
 class ExpenseScreen extends StatelessWidget {
   const ExpenseScreen({super.key});
@@ -87,7 +87,7 @@ class ExpenseScreen extends StatelessWidget {
               },
             ),
           ),
-          const AppFooter(),
+
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -330,7 +330,7 @@ class _FilterBar extends StatelessWidget {
     // Simple filter buttons
     return Container(
       padding: const EdgeInsets.all(8),
-      color: Colors.white,
+      color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -375,7 +375,7 @@ class _FilterChip extends StatelessWidget {
       child: ActionChip(
         label: Text(label),
         onPressed: onTap,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
         elevation: 2,
       ),
     );

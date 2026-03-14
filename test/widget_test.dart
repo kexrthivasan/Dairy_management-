@@ -8,7 +8,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_dairy_manager/main.dart';
-import 'package:home_dairy_manager/logic/services/auth_service.dart';
+import 'package:home_dairy_manager/services/auth_service.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {

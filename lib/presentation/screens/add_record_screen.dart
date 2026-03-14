@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/milk_entry.dart';
-import '../../logic/providers/dairy_provider.dart';
+import '../../presentation/providers/dairy_provider.dart';
 
 class AddRecordScreen extends StatefulWidget {
   final MilkEntry? recordToEdit;

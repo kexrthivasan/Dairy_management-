@@ -17,22 +17,23 @@ class MilkEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final dateStr = DateFormat('EEEE, MMM dd').format(record.date);
     final yearStr = DateFormat('yyyy').format(record.date);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color ?? theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -81,7 +82,7 @@ class MilkEntryCard extends StatelessWidget {
                               yearStr,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                               ),
                             ),
                           ],
@@ -117,7 +118,7 @@ class MilkEntryCard extends StatelessWidget {
                     Container(
                       height: 40,
                       width: 1,
-                      color: Colors.grey.shade200,
+                      color: theme.dividerColor.withOpacity(0.2),
                     ),
                     _buildDataColumn(
                       context,
@@ -129,7 +130,7 @@ class MilkEntryCard extends StatelessWidget {
                     Container(
                       height: 40,
                       width: 1,
-                      color: Colors.grey.shade200,
+                      color: theme.dividerColor.withOpacity(0.2),
                     ),
                     _buildDataColumn(
                       context,
@@ -148,7 +149,7 @@ class MilkEntryCard extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey.shade50,
+                      color: isDark ? Colors.blueGrey.withOpacity(0.2) : Colors.blueGrey.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -165,7 +166,7 @@ class MilkEntryCard extends StatelessWidget {
                             record.notes,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.blueGrey.shade700,
+                              color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey.shade700,
                             ),
                           ),
                         ),
@@ -198,13 +199,13 @@ class MilkEntryCard extends StatelessWidget {
           style: TextStyle(
             fontSize: isTotal ? 18 : 16,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color: isTotal ? Theme.of(context).primaryColor : Colors.black87,
+            color: isTotal ? Theme.of(context).primaryColor : Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600),
         ),
       ],
     );

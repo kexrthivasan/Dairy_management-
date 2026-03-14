@@ -39,6 +39,9 @@ class DriveService {
   static const _legacyBackupKey = 'last_backup_time';
   static const _legacyAutoBackupKey = 'auto_backup_enabled';
 
+  // Restore timestamp key
+  static const _restoreTimeKey = 'last_restore_time';
+
   final AuthService _authService;
 
   DriveService(this._authService);
@@ -272,6 +275,10 @@ class DriveService {
         return 'No backup files found for ${frequency.name} frequency.';
       }
 
+      // Save restore timestamp
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_restoreTimeKey, DateTime.now().toIso8601String());
+
       return 'Success';
     } catch (e) {
       debugPrint("Restore Error: $e");
@@ -318,6 +325,13 @@ class DriveService {
     if (timeStr != null) {
       return DateTime.tryParse(timeStr);
     }
+    return null;
+  }
+
+  Future<DateTime?> getLastRestoreTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final timeStr = prefs.getString(_restoreTimeKey);
+    if (timeStr != null) return DateTime.tryParse(timeStr);
     return null;
   }
 

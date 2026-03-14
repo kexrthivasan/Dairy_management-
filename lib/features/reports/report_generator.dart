@@ -44,10 +44,12 @@ class ReportGenerator {
     milkRecords.sort((a, b) => a.date.compareTo(b.date));
 
     double totalMilk = 0;
+    double totalIncome = 0;
     for (var r in milkRecords) {
       totalMilk += r.totalYield;
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : pricePerLiter;
+      totalIncome += r.totalYield * actualPrice;
     }
-    double totalIncome = totalMilk * pricePerLiter;
     double totalExpense = expenseRecords.fold(0, (sum, e) => sum + e.amount);
     double netProfit = totalIncome - totalExpense;
 
@@ -146,16 +148,19 @@ class ReportGenerator {
     double sumMilk = 0;
     double sumMorning = 0;
     double sumEvening = 0;
+    double sumAmount = 0;
 
     for (var r in records) {
       sumMilk += r.totalYield;
       sumMorning += r.morningMilk;
       sumEvening += r.eveningMilk;
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : price;
+      sumAmount += r.totalYield * actualPrice;
     }
-    double sumAmount = sumMilk * price;
 
     final data = records.map((r) {
-      final amount = r.totalYield * price;
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : price;
+      final amount = r.totalYield * actualPrice;
       return [
         DateFormat('dd-MMM-yyyy').format(r.date),
         r.morningMilk.toStringAsFixed(3),

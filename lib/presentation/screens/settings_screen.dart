@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../../logic/services/drive_service.dart';
-import '../../logic/services/auth_service.dart';
-import '../../logic/providers/theme_provider.dart';
-import '../../logic/services/background_service.dart';
+import '../../services/drive_service.dart';
+import '../../services/auth_service.dart';
+import '../../presentation/providers/theme_provider.dart';
+import '../../services/background_service.dart';
 import 'package:intl/intl.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoBackupEnabled = false;
   BackupFrequency _selectedFrequency = BackupFrequency.daily;
   String? _lastManualBackupTime;
+  String? _lastRestoreTime;
   String _appVersion = 'v1.0.0';
 
   bool _isLoading = false;
@@ -67,12 +68,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _autoBackupEnabled = isAutoEnabled;
       _selectedFrequency = freq;
       _lastManualBackupTime = _formatBackupTime(lastManual);
+      _lastRestoreTime = null; // will be loaded below
+    });
+
+    final lastRestore = await _driveService.getLastRestoreTime();
+    if (!mounted) return;
+    setState(() {
+      _lastRestoreTime = _formatBackupTime(lastRestore);
     });
   }
 
   String _formatBackupTime(DateTime? time) {
     if (time == null) return 'Never';
-    return DateFormat('MMM dd yyyy, h:mm a').format(time);
+    return DateFormat('dd MMMM yyyy — h:mm a').format(time);
   }
 
   Future<void> _handleLogin() async {
@@ -265,6 +273,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
+      if (result == 'Success') _loadBackupSettings();
     } finally {
       if (mounted)
         setState(() {
@@ -392,10 +401,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Last backup: ${_lastManualBackupTime ?? 'Never'}',
+                        'Last Automatic Backup\n${_lastManualBackupTime ?? 'Never'}',
                         style: TextStyle(
                           color: isDark ? Colors.white54 : Colors.grey[600],
                           fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Last Restore\n${_lastRestoreTime ?? 'Never'}',
+                        style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.grey[600],
+                          fontSize: 14,
+                          height: 1.4,
                         ),
                       ),
                       const SizedBox(height: 16),

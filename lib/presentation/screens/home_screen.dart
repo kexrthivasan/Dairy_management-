@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../logic/providers/dairy_provider.dart';
-import '../../logic/services/auth_service.dart';
+import '../../presentation/providers/dairy_provider.dart';
+import '../../services/auth_service.dart';
 import '../widgets/milk_entry_card.dart';
-import '../widgets/footer_widget.dart';
 
 import '../../features/expense/expense_provider.dart';
 import 'add_record_screen.dart';
@@ -473,7 +472,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }),
 
               const SizedBox(height: 40),
-              const AppFooter(),
             ],
           );
         },
@@ -482,153 +480,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDrawer(BuildContext context, bool isDark, ThemeData theme) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              color: theme.primaryColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    backgroundImage:
-                        authService.isLoggedIn &&
-                            authService.userPhotoUrl != null
-                        ? NetworkImage(authService.userPhotoUrl!)
-                        : null,
-                    child:
-                        (!authService.isLoggedIn ||
-                            authService.userPhotoUrl == null)
-                        ? const Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    authService.isLoggedIn
-                        ? (authService.userName ?? 'Farmer')
-                        : 'Farmer',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (authService.isLoggedIn && authService.userEmail != null)
-                    Text(
-                      authService.userEmail!,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _drawerItem(
-                    context,
-                    Icons.home,
-                    'Home',
-                    () => Navigator.pop(context),
-                  ),
-                  _drawerItem(context, Icons.receipt_long, 'Expenses', () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ExpenseScreen()),
-                    );
-                  }),
-                  _drawerItem(
-                    context,
-                    Icons.picture_as_pdf_rounded,
-                    'Reports',
-                    () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FullReportScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _drawerItem(
-                    context,
-                    Icons.calendar_month,
-                    'Monthly Summary',
-                    () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const MonthlySummaryScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _drawerItem(context, Icons.insights_rounded, 'Analytics', () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AnalyticsScreen(),
-                      ),
-                    );
-                  }),
-                  const Divider(),
-                  _drawerItem(context, Icons.settings, 'Settings', () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    );
-                  }),
-                  _drawerItem(context, Icons.info_outline, 'About App', () {
-                    Navigator.pop(context);
-                    showAboutDialog(
-                      context: context,
-                      applicationName: 'Dairy Manager',
-                      applicationVersion: '1.0.0',
-                      applicationLegalese:
-                          '© Keerthivasan – All rights reserved',
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerItem(
-    BuildContext context,
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
-    return ListTile(
-      leading: Icon(icon, color: Theme.of(context).primaryColor),
-      title: Text(label, style: const TextStyle(fontSize: 16)),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-    );
+    return const _AnimatedAppDrawer();
   }
 
   void _confirmDelete(
@@ -773,5 +625,211 @@ class _ActionCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AnimatedAppDrawer extends StatefulWidget {
+  const _AnimatedAppDrawer();
+
+  @override
+  State<_AnimatedAppDrawer> createState() => _AnimatedAppDrawerState();
+}
+
+class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final authService = Provider.of<AuthService>(context);
+
+    // Menu Definitions (Removed "About App")
+    final menuItems = [
+      {'icon': Icons.home, 'label': 'Home', 'route': 'home'},
+      {'icon': Icons.receipt_long, 'label': 'Expenses', 'route': 'expenses'},
+      {'icon': Icons.picture_as_pdf_rounded, 'label': 'Reports', 'route': 'reports'},
+      {'icon': Icons.calendar_month, 'label': 'Monthly Summary', 'route': 'monthly'},
+      {'icon': Icons.insights_rounded, 'label': 'Analytics', 'route': 'analytics'},
+      {'icon': Icons.settings, 'label': 'Settings', 'route': 'settings'},
+    ];
+
+    return Drawer(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              color: theme.primaryColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundImage:
+                        authService.isLoggedIn &&
+                            authService.userPhotoUrl != null
+                        ? NetworkImage(authService.userPhotoUrl!)
+                        : null,
+                    child:
+                        (!authService.isLoggedIn ||
+                            authService.userPhotoUrl == null)
+                        ? const Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    authService.isLoggedIn
+                        ? (authService.userName ?? 'Farmer')
+                        : 'Farmer',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (authService.isLoggedIn && authService.userEmail != null)
+                    Text(
+                      authService.userEmail!,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: menuItems.length,
+                itemBuilder: (context, index) {
+                  final item = menuItems[index];
+
+                  // Animation setup for individual items
+                  final double delayStart = index * 0.1;
+                  final double delayEnd = (index + 1) * 0.1 + 0.3;
+                  
+                  final itemSlide = Tween<Offset>(
+                    begin: const Offset(-0.3, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _controller,
+                      curve: Interval(
+                        delayStart > 1.0 ? 1.0 : delayStart,
+                        delayEnd > 1.0 ? 1.0 : delayEnd,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                  );
+                  final itemFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: _controller,
+                      curve: Interval(
+                        delayStart > 1.0 ? 1.0 : delayStart,
+                        delayEnd > 1.0 ? 1.0 : delayEnd,
+                        curve: Curves.easeIn,
+                      ),
+                    ),
+                  );
+
+                  return SlideTransition(
+                    position: itemSlide,
+                    child: FadeTransition(
+                      opacity: itemFade,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: _buildDrawerItem(
+                          context,
+                          item['icon'] as IconData,
+                          item['label'] as String,
+                          () => _handleMenuTap(context, item['route'] as String),
+                          theme,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(BuildContext context, IconData icon, String label, VoidCallback onTap, ThemeData theme) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: theme.primaryColor.withOpacity(0.05),
+        splashColor: theme.primaryColor.withOpacity(0.1),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: theme.primaryColor, size: 24),
+              const SizedBox(width: 16),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleMenuTap(BuildContext context, String route) {
+    Navigator.pop(context); // Close drawer smoothly
+    Future.delayed(const Duration(milliseconds: 250), () {
+      switch (route) {
+        case 'home':
+          break; // Already here
+        case 'expenses':
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpenseScreen()));
+          break;
+        case 'reports':
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const FullReportScreen()));
+          break;
+        case 'monthly':
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlySummaryScreen()));
+          break;
+        case 'analytics':
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen()));
+          break;
+        case 'settings':
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          break;
+      }
+    });
   }
 }

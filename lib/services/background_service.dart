@@ -147,7 +147,7 @@ class BackgroundService {
         await flutterLocalNotificationsPlugin.zonedSchedule(
           id: 100 + i,
           title: 'Milk Entry Reminder',
-          body: "Please add today's milk entry.",
+          body: "Milk entry for today has not been recorded. Please update it.",
           scheduledDate: scheduledTime,
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
