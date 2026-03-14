@@ -28,7 +28,7 @@ class MilkEntryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            color: isDark ? const Color(0x4D000000) : const Color(0x0D000000), // 0.3 and 0.05 opacity on black
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
