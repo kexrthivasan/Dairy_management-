@@ -11,3 +11,4 @@ android/local.properties
 ios/Pods/
 ios/.symlinks/
 *.log
+.env
