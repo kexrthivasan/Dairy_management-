@@ -3,73 +3,192 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../features/expense/expense_provider.dart';
 import '../../data/models/expense_entry.dart';
+import 'add_expense_screen.dart';
 
-
-class ExpenseScreen extends StatelessWidget {
+class ExpenseScreen extends StatefulWidget {
   const ExpenseScreen({super.key});
 
   @override
+  State<ExpenseScreen> createState() => _ExpenseScreenState();
+}
+
+class _ExpenseScreenState extends State<ExpenseScreen> {
+  String _selectedFilter = 'All';
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Expenses')),
+      appBar: AppBar(
+        title: const Text('Expenses'),
+      ),
       body: Column(
         children: [
-          // Filters
-          _FilterBar(),
-          // List
+          // Redesigned Filters Bar
+          _buildFilterBar(),
+
+          // Summary Expense Period Card
+          Consumer<ExpenseProvider>(
+            builder: (context, provider, child) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF3E0A0A), const Color(0xFF6B1111)]
+                        : [const Color(0xFFFFEBEE), const Color(0xFFFFCDD2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(isDark ? 0.2 : 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Expenses ($_selectedFilter)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.red.shade200 : Colors.red.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '₹${provider.totalExpense.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.red.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.red.shade700).withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.trending_down,
+                        size: 32,
+                        color: isDark ? Colors.white : Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // Redesigned List
           Expanded(
             child: Consumer<ExpenseProvider>(
               builder: (context, provider, child) {
-                if (provider.isLoading)
+                if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 if (provider.entries.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "No expenses found.",
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.money_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "No expenses found.",
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: provider.entries.length,
                   itemBuilder: (context, index) {
                     final entry = provider.entries[index];
-                    return Card(
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(isDark ? 0.05 : 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.red.shade100,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
                           child: Icon(
                             _getIcon(entry.category),
-                            color: Colors.red,
+                            color: Colors.redAccent,
+                            size: 24,
                           ),
                         ),
                         title: Text(
-                          entry.category.name.toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          _getCategoryName(entry.category),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 16,
+                          ),
                         ),
                         subtitle: Text(
-                          "${DateFormat('MMM dd').format(entry.date)} - ${entry.notes ?? ''}",
+                          "${DateFormat('MMM dd, yyyy').format(entry.date)}${entry.notes != null && entry.notes!.isNotEmpty ? ' — ${entry.notes}' : ''}",
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.grey.shade600,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              "- Rs.${entry.amount.toStringAsFixed(0)}",
+                              "- ₹${entry.amount.toStringAsFixed(0)}",
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                                color: Colors.redAccent,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 8),
                             IconButton(
                               icon: const Icon(
-                                Icons.delete,
+                                Icons.delete_outline,
                                 color: Colors.redAccent,
                               ),
                               onPressed: () =>
@@ -77,9 +196,14 @@ class ExpenseScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        onTap: () => _showEditDialog(context, entry),
-                        onLongPress: () =>
-                            _confirmDelete(context, provider, entry),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddExpenseScreen(expenseToEdit: entry),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
@@ -87,14 +211,54 @@ class ExpenseScreen extends StatelessWidget {
               },
             ),
           ),
-
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
-        label: const Text('Add Expense'),
-        icon: const Icon(Icons.money_off),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddExpenseScreen(),
+            ),
+          );
+        },
+        label: const Text('Add Expense', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        icon: const Icon(Icons.add, color: Colors.white),
         backgroundColor: Colors.redAccent,
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _FilterChip(
+            label: "All",
+            isSelected: _selectedFilter == 'All',
+            onTap: () {
+              setState(() => _selectedFilter = 'All');
+              Provider.of<ExpenseProvider>(context, listen: false).resetFilter();
+            },
+          ),
+          _FilterChip(
+            label: "This Week",
+            isSelected: _selectedFilter == 'This Week',
+            onTap: () {
+              setState(() => _selectedFilter = 'This Week');
+              Provider.of<ExpenseProvider>(context, listen: false).filterByWeek(DateTime.now());
+            },
+          ),
+          _FilterChip(
+            label: "This Month",
+            isSelected: _selectedFilter == 'This Month',
+            onTap: () {
+              setState(() => _selectedFilter = 'This Month');
+              Provider.of<ExpenseProvider>(context, listen: false).filterByMonth(DateTime.now());
+            },
+          ),
+        ],
       ),
     );
   }
@@ -106,9 +270,22 @@ class ExpenseScreen extends StatelessWidget {
       case ExpenseCategory.medical:
         return Icons.medical_services;
       case ExpenseCategory.rice:
-        return Icons.rice_bowl; // Use a suitable icon
+        return Icons.rice_bowl;
       case ExpenseCategory.others:
         return Icons.category;
+    }
+  }
+
+  String _getCategoryName(ExpenseCategory cat) {
+    switch (cat) {
+      case ExpenseCategory.feed:
+        return 'Feed';
+      case ExpenseCategory.medical:
+        return 'Medical';
+      case ExpenseCategory.rice:
+        return 'Rice';
+      case ExpenseCategory.others:
+        return 'Other';
     }
   }
 
@@ -121,243 +298,21 @@ class ExpenseScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Delete Expense?"),
+        content: const Text("Are you sure you want to delete this expense record?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text("CANCEL"),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
               provider.deleteExpense(entry);
               Navigator.pop(ctx);
             },
-            child: const Text("DELETE", style: TextStyle(color: Colors.red)),
+            child: const Text("DELETE", style: TextStyle(color: Colors.white)),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context, ExpenseEntry entry) {
-    final amountCtrl = TextEditingController(text: entry.amount.toString());
-    final notesCtrl = TextEditingController(text: entry.notes);
-    ExpenseCategory selectedCat = entry.category;
-    DateTime selectedDate = entry.date;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text("Edit Expense"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: amountCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Amount (Rs)",
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<ExpenseCategory>(
-                      value: selectedCat,
-                      items: ExpenseCategory.values
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name.toUpperCase()),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedCat = v!),
-                      decoration: const InputDecoration(labelText: "Category"),
-                    ),
-                    const SizedBox(height: 10),
-                    ListTile(
-                      title: Text(
-                        "Date: ${DateFormat('dd MMM').format(selectedDate)}",
-                      ),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final d = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (d != null) setState(() => selectedDate = d);
-                      },
-                    ),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: const InputDecoration(labelText: "Notes"),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("CANCEL"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final amt = double.tryParse(amountCtrl.text);
-                    if (amt == null) return;
-
-                    Provider.of<ExpenseProvider>(
-                      context,
-                      listen: false,
-                    ).updateExpense(
-                      entry,
-                      selectedDate,
-                      selectedCat,
-                      amt,
-                      notesCtrl.text,
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text("UPDATE"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAddDialog(BuildContext context) {
-    final amountCtrl = TextEditingController();
-    final notesCtrl = TextEditingController();
-    ExpenseCategory selectedCat = ExpenseCategory.feed;
-    DateTime selectedDate = DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text("New Expense"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: amountCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Amount (Rs)",
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<ExpenseCategory>(
-                      value: selectedCat,
-                      items: ExpenseCategory.values
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name.toUpperCase()),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedCat = v!),
-                      decoration: const InputDecoration(labelText: "Category"),
-                    ),
-                    const SizedBox(height: 10),
-                    ListTile(
-                      title: Text(
-                        "Date: ${DateFormat('dd MMM').format(selectedDate)}",
-                      ),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final d = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (d != null) setState(() => selectedDate = d);
-                      },
-                    ),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: const InputDecoration(labelText: "Notes"),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("CANCEL"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final amt = double.tryParse(amountCtrl.text);
-                    if (amt == null) return;
-
-                    Provider.of<ExpenseProvider>(
-                      context,
-                      listen: false,
-                    ).addExpense(
-                      selectedDate,
-                      selectedCat,
-                      amt,
-                      notesCtrl.text,
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text("SAVE"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _FilterBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Simple filter buttons
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _FilterChip(
-              label: "All",
-              onTap: () => Provider.of<ExpenseProvider>(
-                context,
-                listen: false,
-              ).resetFilter(),
-            ),
-            _FilterChip(
-              label: "This Week",
-              onTap: () => Provider.of<ExpenseProvider>(
-                context,
-                listen: false,
-              ).filterByWeek(DateTime.now()),
-            ),
-            _FilterChip(
-              label: "This Month",
-              onTap: () => Provider.of<ExpenseProvider>(
-                context,
-                listen: false,
-              ).filterByMonth(DateTime.now()),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -365,18 +320,35 @@ class _FilterBar extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   final String label;
+  final bool isSelected;
   final VoidCallback onTap;
-  const _FilterChip({required this.label, required this.onTap});
+  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: ActionChip(
+      child: ChoiceChip(
         label: Text(label),
-        onPressed: onTap,
-        backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
-        elevation: 2,
+        selected: isSelected,
+        onSelected: (_) => onTap(),
+        selectedColor: Colors.redAccent,
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade100,
+        labelStyle: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade800),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isSelected
+                ? Colors.redAccent
+                : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+          ),
+        ),
       ),
     );
   }

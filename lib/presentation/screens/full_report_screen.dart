@@ -194,17 +194,45 @@ class _FullReportScreenState extends State<FullReportScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Filter Radio Buttons
-                const Text('Report Filter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Wrap(
-                  spacing: 4.0,
-                  runSpacing: -8.0,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildRadioOption('Today'),
-                    _buildRadioOption('This Week'),
-                    _buildRadioOption('This Month'),
-                    _buildRadioOption('Last Month'),
-                    _buildRadioOption('Custom Range'),
+                    const Text('Report Filter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    PopupMenuButton<String>(
+                      initialValue: _currentFilter,
+                      onSelected: (value) => _handleRadioChange(value),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Theme.of(context).primaryColor.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _currentFilter,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).primaryColor),
+                          ],
+                        ),
+                      ),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'Today', child: Text('Today')),
+                        const PopupMenuItem(value: 'This Week', child: Text('This Week')),
+                        const PopupMenuItem(value: 'This Month', child: Text('This Month')),
+                        const PopupMenuItem(value: 'Last Month', child: Text('Last Month')),
+                        const PopupMenuItem(value: 'Custom Range', child: Text('Custom Range')),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -632,6 +660,8 @@ class _FullReportScreenState extends State<FullReportScreen> {
                       periodLabel:
                           "${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}",
                       isDownload: true,
+                      startDate: start,
+                      endDate: end,
                     );
                   },
                 ),

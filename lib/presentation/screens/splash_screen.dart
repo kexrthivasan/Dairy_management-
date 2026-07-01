@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/background_service.dart';
@@ -23,17 +25,27 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+
     // Navigate immediately — all heavy setup (Hive, dotenv) is done in main()
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
+    if (!isTest && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainScreen()),
+          );
+        }
+      });
     }
 
     // Auth (signInSilently = network call) and background service run
     // completely in background AFTER navigation — never blocks UI
-    widget.authService.init();
-    BackgroundService.initialize();
+    if (!isTest) {
+      Future.delayed(const Duration(milliseconds: 250), () {
+        widget.authService.init();
+        BackgroundService.initialize();
+      });
+    }
   }
 
   @override

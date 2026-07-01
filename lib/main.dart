@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/themes/app_theme.dart';
 import 'presentation/providers/dairy_provider.dart';
 import 'presentation/providers/theme_provider.dart';
@@ -14,26 +15,48 @@ import 'data/models/expense_entry.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Must load .env first — AuthService constructor reads GOOGLE_CLIENT_ID from it
+  // Load dotenv
   await dotenv.load(fileName: ".env");
 
-  // Init Hive and register adapters
+  // Init Hive
   await Hive.initFlutter();
   if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(MilkEntryAdapter());
   if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(ExpenseEntryAdapter());
-  if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(ExpenseCategoryAdapter());
+  if (!Hive.isAdapterRegistered(2))
+    Hive.registerAdapter(ExpenseCategoryAdapter());
 
-  // Now safe to create AuthService (needs dotenv)
+  // Pre-open Hive boxes and SharedPreferences concurrently
+  final Future<void> hiveMilkFuture = Hive.openBox<MilkEntry>('milk_records')
+      .then((_) {})
+      .catchError((e) {
+        debugPrint('Hive preload error: $e');
+      });
+  final Future<void> hiveExpenseFuture =
+      Hive.openBox<ExpenseEntry>('expense_entries').then((_) {}).catchError((
+        e,
+      ) {
+        debugPrint('Hive preload error: $e');
+      });
+
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkModeSync = prefs.getBool('is_dark_mode') ?? false;
+
+  await Future.wait([hiveMilkFuture, hiveExpenseFuture]);
+
   final authService = AuthService();
 
-  runApp(MyApp(authService: authService));
+  runApp(MyApp(authService: authService, isDarkModeSync: isDarkModeSync));
 }
-
 
 class MyApp extends StatelessWidget {
   final AuthService authService;
+  final bool isDarkModeSync;
 
-  const MyApp({super.key, required this.authService});
+  const MyApp({
+    super.key,
+    required this.authService,
+    required this.isDarkModeSync,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +64,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => DairyProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(initialDark: isDarkModeSync),
+        ),
         ChangeNotifierProvider.value(value: authService),
       ],
       child: Consumer<ThemeProvider>(
@@ -59,4 +84,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:home_dairy_manager/presentation/screens/home_screen.dart';
-import 'package:home_dairy_manager/presentation/screens/expense_screen.dart';
+import 'package:home_dairy_manager/presentation/screens/reports_screen.dart';
 import 'package:home_dairy_manager/features/analytics/screens/analytics_screen.dart';
 import 'package:home_dairy_manager/presentation/screens/monthly_summary_screen.dart';
 import 'package:home_dairy_manager/presentation/screens/settings_screen.dart';
@@ -23,8 +23,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // Defer heavy background work to after the first frame renders
-    // so the UI appears instantly on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initBackupScheduler();
     });
@@ -35,7 +33,6 @@ class _MainScreenState extends State<MainScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final driveService = DriveService(authService);
     _backupScheduler = BackupScheduler(driveService, authService);
-    // Delay backup check further so it doesn't compete with UI rendering
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) _backupScheduler!.start();
     });
@@ -49,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const ExpenseScreen(),
+    const ReportsScreen(),
     const AnalyticsScreen(),
     const MonthlySummaryScreen(),
     const SettingsScreen(),
@@ -57,62 +54,57 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = Theme.of(context).primaryColor;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = theme.primaryColor;
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: isDark ? const Color(0xFF1B1D1B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-            selectedItemColor: primary,
-            unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
-            showUnselectedLabels: true,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 12),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined, size: 28),
-                activeIcon: Icon(Icons.home, size: 28),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) => setState(() => _currentIndex = index),
+            backgroundColor: isDark ? const Color(0xFF1B1D1B) : Colors.white,
+            indicatorColor: primary.withOpacity(0.12),
+            elevation: 0,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                selectedIcon: Icon(Icons.home, color: primary),
                 label: 'Home',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_wallet_outlined, size: 28),
-                activeIcon: Icon(Icons.account_balance_wallet, size: 28),
-                label: 'Expense',
+              NavigationDestination(
+                icon: Icon(Icons.assessment_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                selectedIcon: Icon(Icons.assessment, color: primary),
+                label: 'Reports',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bar_chart_outlined, size: 28),
-                activeIcon: Icon(Icons.bar_chart, size: 28),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                selectedIcon: Icon(Icons.bar_chart, color: primary),
                 label: 'Charts',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_month_outlined, size: 28),
-                activeIcon: Icon(Icons.calendar_month, size: 28),
+              NavigationDestination(
+                icon: Icon(Icons.calendar_month_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                selectedIcon: Icon(Icons.calendar_month, color: primary),
                 label: 'Summary',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings_outlined, size: 28),
-                activeIcon: Icon(Icons.settings, size: 28),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                selectedIcon: Icon(Icons.settings, color: primary),
                 label: 'Settings',
               ),
             ],

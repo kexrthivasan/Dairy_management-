@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../presentation/providers/dairy_provider.dart';
 import '../../services/auth_service.dart';
 import '../widgets/milk_entry_card.dart';
+import '../../data/models/expense_entry.dart';
+import '../../data/models/milk_entry.dart';
 
 import '../../features/expense/expense_provider.dart';
 import 'add_record_screen.dart';
+import 'add_expense_screen.dart';
 import 'expense_screen.dart';
 import 'full_report_screen.dart';
 import 'monthly_summary_screen.dart';
@@ -193,6 +197,15 @@ class _HomeScreenState extends State<HomeScreen> {
           final totalIncome = provider.getMonthlyIncome(now);
           final totalExpense = expenseProvider.getMonthlyTotal(now);
 
+          final List<dynamic> combinedRecent = [];
+          combinedRecent.addAll(provider.allRecords);
+          combinedRecent.addAll(expenseProvider.allEntries);
+          combinedRecent.sort((a, b) {
+            final da = (a is MilkEntry) ? a.date : (a as ExpenseEntry).date;
+            final db = (b is MilkEntry) ? b.date : (b as ExpenseEntry).date;
+            return db.compareTo(da);
+          });
+
           return ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: [
@@ -331,48 +344,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _ActionCard(
-                            icon: Icons.receipt_long,
-                            label: 'Expenses',
-                            subtitle: 'Track costs',
-                            color: Colors.redAccent,
+                            icon: Icons.post_add_rounded,
+                            label: 'Add Expense',
+                            subtitle: 'New cost',
+                            color: Colors.orange,
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const ExpenseScreen(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.insights_rounded,
-                            label: 'Analytics',
-                            subtitle: 'View charts',
-                            color: Colors.purple,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AnalyticsScreen(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.picture_as_pdf_rounded,
-                            label: 'Reports',
-                            subtitle: 'Export data',
-                            color: Colors.green,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const FullReportScreen(),
+                                builder: (_) => const AddExpenseScreen(),
                               ),
                             ),
                           ),
@@ -414,12 +393,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
-              if (provider.isLoading)
+              if (provider.isLoading || expenseProvider.isLoading)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: Center(child: CircularProgressIndicator()),
                 )
-              else if (provider.records.isEmpty)
+              else if (combinedRecent.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(32.0),
                   child: Center(
@@ -432,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No milk records yet.',
+                          'No records logged yet.',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 16,
@@ -454,21 +433,43 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                ...provider.records.take(5).map((record) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: MilkEntryCard(
-                      record: record,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AddRecordScreen(recordToEdit: record),
+                ...combinedRecent.take(5).map((item) {
+                  if (item is MilkEntry) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: MilkEntryCard(
+                        record: item,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddRecordScreen(recordToEdit: item),
+                          ),
+                        ),
+                        onDelete: () =>
+                            _confirmDelete(context, provider, item.date),
+                      ),
+                    );
+                  } else {
+                    final ExpenseEntry exp = item as ExpenseEntry;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _RecentExpenseCard(
+                        entry: exp,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AddExpenseScreen(expenseToEdit: exp),
+                          ),
+                        ),
+                        onDelete: () => _confirmDeleteExpense(
+                          context,
+                          expenseProvider,
+                          exp,
                         ),
                       ),
-                      onDelete: () =>
-                          _confirmDelete(context, provider, record.date),
-                    ),
-                  );
+                    );
+                  }
                 }),
 
               const SizedBox(height: 40),
@@ -506,6 +507,38 @@ class _HomeScreenState extends State<HomeScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
               provider.deleteRecord(date);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteExpense(
+    BuildContext context,
+    ExpenseProvider provider,
+    ExpenseEntry entry,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Expense?'),
+        content: const Text(
+          'Are you sure you want to delete this expense record?\nThis action cannot be undone.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              provider.deleteExpense(entry);
               Navigator.pop(ctx);
             },
             child: const Text('Delete'),
@@ -635,14 +668,17 @@ class _AnimatedAppDrawer extends StatefulWidget {
   State<_AnimatedAppDrawer> createState() => _AnimatedAppDrawerState();
 }
 
-class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTickerProviderStateMixin {
+class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _controller.forward();
   }
 
@@ -661,9 +697,21 @@ class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTicke
     final menuItems = [
       {'icon': Icons.home, 'label': 'Home', 'route': 'home'},
       {'icon': Icons.receipt_long, 'label': 'Expenses', 'route': 'expenses'},
-      {'icon': Icons.picture_as_pdf_rounded, 'label': 'Reports', 'route': 'reports'},
-      {'icon': Icons.calendar_month, 'label': 'Monthly Summary', 'route': 'monthly'},
-      {'icon': Icons.insights_rounded, 'label': 'Analytics', 'route': 'analytics'},
+      {
+        'icon': Icons.picture_as_pdf_rounded,
+        'label': 'Reports',
+        'route': 'reports',
+      },
+      {
+        'icon': Icons.calendar_month,
+        'label': 'Monthly Summary',
+        'route': 'monthly',
+      },
+      {
+        'icon': Icons.insights_rounded,
+        'label': 'Analytics',
+        'route': 'analytics',
+      },
       {'icon': Icons.settings, 'label': 'Settings', 'route': 'settings'},
     ];
 
@@ -729,20 +777,21 @@ class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTicke
                   // Animation setup for individual items
                   final double delayStart = index * 0.1;
                   final double delayEnd = (index + 1) * 0.1 + 0.3;
-                  
-                  final itemSlide = Tween<Offset>(
-                    begin: const Offset(-0.3, 0),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: _controller,
-                      curve: Interval(
-                        delayStart > 1.0 ? 1.0 : delayStart,
-                        delayEnd > 1.0 ? 1.0 : delayEnd,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    ),
-                  );
+
+                  final itemSlide =
+                      Tween<Offset>(
+                        begin: const Offset(-0.3, 0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: _controller,
+                          curve: Interval(
+                            delayStart > 1.0 ? 1.0 : delayStart,
+                            delayEnd > 1.0 ? 1.0 : delayEnd,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                      );
                   final itemFade = Tween<double>(begin: 0.0, end: 1.0).animate(
                     CurvedAnimation(
                       parent: _controller,
@@ -759,12 +808,16 @@ class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTicke
                     child: FadeTransition(
                       opacity: itemFade,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         child: _buildDrawerItem(
                           context,
                           item['icon'] as IconData,
                           item['label'] as String,
-                          () => _handleMenuTap(context, item['route'] as String),
+                          () =>
+                              _handleMenuTap(context, item['route'] as String),
                           theme,
                         ),
                       ),
@@ -779,7 +832,13 @@ class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTicke
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String label, VoidCallback onTap, ThemeData theme) {
+  Widget _buildDrawerItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+    ThemeData theme,
+  ) {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -815,21 +874,217 @@ class _AnimatedAppDrawerState extends State<_AnimatedAppDrawer> with SingleTicke
         case 'home':
           break; // Already here
         case 'expenses':
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpenseScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ExpenseScreen()),
+          );
           break;
         case 'reports':
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const FullReportScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const FullReportScreen()),
+          );
           break;
         case 'monthly':
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlySummaryScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MonthlySummaryScreen()),
+          );
           break;
         case 'analytics':
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
+          );
           break;
         case 'settings':
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          );
           break;
       }
     });
+  }
+}
+
+class _RecentExpenseCard extends StatelessWidget {
+  final ExpenseEntry entry;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _RecentExpenseCard({
+    required this.entry,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final dateStr = DateFormat('EEEE, MMM dd').format(entry.date);
+    final yearStr = DateFormat('yyyy').format(entry.date);
+
+    String catName;
+    IconData icon;
+    switch (entry.category) {
+      case ExpenseCategory.feed:
+        catName = 'Feed';
+        icon = Icons.grass;
+        break;
+      case ExpenseCategory.medical:
+        catName = 'Medical';
+        icon = Icons.medical_services;
+        break;
+      case ExpenseCategory.rice:
+        catName = 'Rice';
+        icon = Icons.rice_bowl;
+        break;
+      case ExpenseCategory.others:
+        catName = 'Other';
+        icon = Icons.category;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x4D000000) : const Color(0x0D000000),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.redAccent,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              yearStr,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 26,
+                        color: Colors.redAccent,
+                      ),
+                      onPressed: onDelete,
+                      tooltip: 'Delete Expense',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, thickness: 1),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: Colors.redAccent, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            catName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (entry.notes != null &&
+                              entry.notes!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              entry.notes!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '- ₹${entry.amount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

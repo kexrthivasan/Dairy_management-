@@ -53,9 +53,15 @@ class DriveService {
         return null;
       }
 
-      final authHeaders = await _authService.getAuthHeaders();
+      var authHeaders = await _authService.getAuthHeaders();
       if (authHeaders == null) {
-        debugPrint('DriveService: Could not get auth headers.');
+        debugPrint('DriveService: Could not get auth headers. Attempting silent sign-in refresh...');
+        final account = await _authService.googleSignIn.signInSilently();
+        authHeaders = await account?.authHeaders;
+      }
+
+      if (authHeaders == null) {
+        debugPrint('DriveService: Auth headers could not be refreshed.');
         return null;
       }
 
@@ -128,7 +134,7 @@ class DriveService {
     }
   }
 
-  /// Backup Hive data to Google Drive for a specific frequency.
+  /// Backup Hive data to Google Drive for a specific frequency with retry and token refresh resilience.
   Future<String> backupHive({BackupFrequency frequency = BackupFrequency.daily}) async {
     if (kIsWeb) {
       return 'Web browser does not support physical file backups.';
@@ -144,74 +150,87 @@ class DriveService {
       return 'No internet connection.';
     }
 
-    try {
-      final driveApi = await _getDriveApi();
-      if (driveApi == null) return 'Google authentication failed. Please re-login.';
+    int attempts = 0;
+    const maxAttempts = 3;
+    String lastError = 'Backup failed.';
 
-      final folderId = await _getBackupFolderId(driveApi);
-      if (folderId == null) return 'Could not create or find Backup folder.';
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        final driveApi = await _getDriveApi();
+        if (driveApi == null) {
+          lastError = 'Google authentication failed. Please re-login.';
+          // Try to trigger a silent sign-in to recover auth next time
+          await _authService.googleSignIn.signInSilently();
+          continue;
+        }
 
-      final dir = await getApplicationDocumentsDirectory();
-      final prefix = _getBackupPrefix(frequency);
+        final folderId = await _getBackupFolderId(driveApi);
+        if (folderId == null) {
+          lastError = 'Could not create or find Backup folder.';
+          continue;
+        }
 
-      final filesToBackup = {
-        'milk_records.hive': '${prefix}_milk_records.hive',
-        'expense_entries.hive': '${prefix}_expense_entries.hive',
-      };
+        final dir = await getApplicationDocumentsDirectory();
+        final prefix = _getBackupPrefix(frequency);
 
-      for (var entry in filesToBackup.entries) {
-        final localFileName = entry.key;
-        final driveFileName = entry.value;
-        final filePath = '${dir.path}/$localFileName';
-        final file = File(filePath);
-        if (!await file.exists()) continue;
+        final filesToBackup = {
+          'milk_records.hive': '${prefix}_milk_records.hive',
+          'expense_entries.hive': '${prefix}_expense_entries.hive',
+        };
 
-        // Check if file already exists in Drive to update
-        final currentDriveFiles = await driveApi.files.list(
-          q: "'$folderId' in parents and name = '$driveFileName' and trashed = false",
-          spaces: 'drive',
-        );
+        for (var entry in filesToBackup.entries) {
+          final localFileName = entry.key;
+          final driveFileName = entry.value;
+          final filePath = '${dir.path}/$localFileName';
+          final file = File(filePath);
+          if (!await file.exists()) continue;
 
-        var driveFile = drive.File()
-          ..name = driveFileName;
-
-        final media = drive.Media(file.openRead(), file.lengthSync());
-
-        if (currentDriveFiles.files != null && currentDriveFiles.files!.isNotEmpty) {
-          final fileId = currentDriveFiles.files!.first.id!;
-          // For updates, don't set parents - it's not allowed in update requests
-          await driveApi.files.update(
-            driveFile,
-            fileId,
-            uploadMedia: media,
+          // Check if file already exists in Drive to update
+          final currentDriveFiles = await driveApi.files.list(
+            q: "'$folderId' in parents and name = '$driveFileName' and trashed = false",
+            spaces: 'drive',
           );
-        } else {
-          // For new files, set the parent folder
-          driveFile.parents = [folderId];
-          await driveApi.files.create(
-            driveFile,
-            uploadMedia: media,
-          );
+
+          var driveFile = drive.File()..name = driveFileName;
+          final media = drive.Media(file.openRead(), file.lengthSync());
+
+          if (currentDriveFiles.files != null && currentDriveFiles.files!.isNotEmpty) {
+            final fileId = currentDriveFiles.files!.first.id!;
+            await driveApi.files.update(
+              driveFile,
+              fileId,
+              uploadMedia: media,
+            );
+          } else {
+            driveFile.parents = [folderId];
+            await driveApi.files.create(
+              driveFile,
+              uploadMedia: media,
+            );
+          }
+        }
+
+        // Update backup times upon success
+        final prefs = await SharedPreferences.getInstance();
+        final timeKey = _getBackupTimeKey(frequency);
+        await prefs.setString(timeKey, DateTime.now().toIso8601String());
+        await prefs.setString(_legacyBackupKey, DateTime.now().toIso8601String());
+
+        return 'Success';
+      } catch (e) {
+        debugPrint("DriveService: Backup attempt $attempts failed: $e");
+        lastError = 'Upload error: $e';
+        if (attempts < maxAttempts) {
+          // Exponential backoff
+          await Future.delayed(Duration(seconds: attempts * 2));
         }
       }
-
-      // Update backup time for this frequency
-      final prefs = await SharedPreferences.getInstance();
-      final timeKey = _getBackupTimeKey(frequency);
-      await prefs.setString(timeKey, DateTime.now().toIso8601String());
-      
-      // Also update legacy key for backwards compatibility
-      await prefs.setString(_legacyBackupKey, DateTime.now().toIso8601String());
-
-      return 'Success';
-    } catch (e) {
-      debugPrint("Backup Error: $e");
-      return 'Error: $e';
     }
+    return lastError;
   }
 
-  /// Restore Hive data from Google Drive.
-  /// Restores from the most recent backup (daily by default).
+  /// Restore Hive data from Google Drive with retry and token refresh resilience.
   Future<String> restoreHive({BackupFrequency frequency = BackupFrequency.daily}) async {
     if (kIsWeb) {
       return 'Web browser does not support physical file restores.';
@@ -222,68 +241,88 @@ class DriveService {
     }
 
     final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none)) return 'No internet connection.';
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      return 'No internet connection.';
+    }
 
-    try {
-      final driveApi = await _getDriveApi();
-      if (driveApi == null) return 'Google authentication failed. Please re-login.';
+    int attempts = 0;
+    const maxAttempts = 3;
+    String lastError = 'Restore failed.';
 
-      final folderId = await _getBackupFolderId(driveApi);
-      if (folderId == null) return 'Could not find Backup folder on Drive.';
-
-      final prefix = _getBackupPrefix(frequency);
-      final filesToRestore = {
-        '${prefix}_milk_records.hive': 'milk_records.hive',
-        '${prefix}_expense_entries.hive': 'expense_entries.hive',
-      };
-
-      final dir = await getApplicationDocumentsDirectory();
-      bool anyRestored = false;
-
-      for (var entry in filesToRestore.entries) {
-        final driveFileName = entry.key;
-        final localFileName = entry.value;
-
-        final driveFiles = await driveApi.files.list(
-          q: "'$folderId' in parents and name = '$driveFileName' and trashed = false",
-          spaces: 'drive',
-        );
-
-        if (driveFiles.files == null || driveFiles.files!.isEmpty) {
-          // Try legacy file names (without prefix) if frequency backup not found
-          if (frequency == BackupFrequency.daily) {
-            final legacyFiles = await driveApi.files.list(
-              q: "'$folderId' in parents and name = '$localFileName' and trashed = false",
-              spaces: 'drive',
-            );
-            if (legacyFiles.files == null || legacyFiles.files!.isEmpty) continue;
-            
-            final fileId = legacyFiles.files!.first.id!;
-            await _downloadAndSave(driveApi, fileId, '${dir.path}/$localFileName');
-            anyRestored = true;
-            continue;
-          }
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        final driveApi = await _getDriveApi();
+        if (driveApi == null) {
+          lastError = 'Google authentication failed. Please re-login.';
+          await _authService.googleSignIn.signInSilently();
           continue;
         }
 
-        final fileId = driveFiles.files!.first.id!;
-        await _downloadAndSave(driveApi, fileId, '${dir.path}/$localFileName');
-        anyRestored = true;
+        final folderId = await _getBackupFolderId(driveApi);
+        if (folderId == null) {
+          lastError = 'Could not find Backup folder on Drive.';
+          continue;
+        }
+
+        final prefix = _getBackupPrefix(frequency);
+        final filesToRestore = {
+          '${prefix}_milk_records.hive': 'milk_records.hive',
+          '${prefix}_expense_entries.hive': 'expense_entries.hive',
+        };
+
+        final dir = await getApplicationDocumentsDirectory();
+        bool anyRestored = false;
+
+        for (var entry in filesToRestore.entries) {
+          final driveFileName = entry.key;
+          final localFileName = entry.value;
+
+          final driveFiles = await driveApi.files.list(
+            q: "'$folderId' in parents and name = '$driveFileName' and trashed = false",
+            spaces: 'drive',
+          );
+
+          if (driveFiles.files == null || driveFiles.files!.isEmpty) {
+            // Try legacy names if daily is empty
+            if (frequency == BackupFrequency.daily) {
+              final legacyFiles = await driveApi.files.list(
+                q: "'$folderId' in parents and name = '$localFileName' and trashed = false",
+                spaces: 'drive',
+              );
+              if (legacyFiles.files == null || legacyFiles.files!.isEmpty) continue;
+
+              final fileId = legacyFiles.files!.first.id!;
+              await _downloadAndSave(driveApi, fileId, '${dir.path}/$localFileName');
+              anyRestored = true;
+              continue;
+            }
+            continue;
+          }
+
+          final fileId = driveFiles.files!.first.id!;
+          await _downloadAndSave(driveApi, fileId, '${dir.path}/$localFileName');
+          anyRestored = true;
+        }
+
+        if (!anyRestored) {
+          return 'No backup files found for ${frequency.name} frequency.';
+        }
+
+        // Save restore timestamp
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_restoreTimeKey, DateTime.now().toIso8601String());
+
+        return 'Success';
+      } catch (e) {
+        debugPrint("DriveService: Restore attempt $attempts failed: $e");
+        lastError = 'Download error: $e';
+        if (attempts < maxAttempts) {
+          await Future.delayed(Duration(seconds: attempts * 2));
+        }
       }
-
-      if (!anyRestored) {
-        return 'No backup files found for ${frequency.name} frequency.';
-      }
-
-      // Save restore timestamp
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_restoreTimeKey, DateTime.now().toIso8601String());
-
-      return 'Success';
-    } catch (e) {
-      debugPrint("Restore Error: $e");
-      return 'Error: $e';
     }
+    return lastError;
   }
 
   Future<void> _downloadAndSave(drive.DriveApi driveApi, String fileId, String localPath) async {
@@ -315,12 +354,7 @@ class DriveService {
 
   Future<DateTime?> getLastBackupTime([BackupFrequency? frequency]) async {
     final prefs = await SharedPreferences.getInstance();
-    String key;
-    if (frequency != null) {
-      key = _getBackupTimeKey(frequency);
-    } else {
-      key = _legacyBackupKey;
-    }
+    String key = frequency != null ? _getBackupTimeKey(frequency) : _legacyBackupKey;
     final timeStr = prefs.getString(key);
     if (timeStr != null) {
       return DateTime.tryParse(timeStr);
@@ -347,15 +381,12 @@ class DriveService {
 
     switch (frequency) {
       case BackupFrequency.daily:
-        // Due if last backup was not today
         return lastBackup.year != now.year ||
             lastBackup.month != now.month ||
             lastBackup.day != now.day;
       case BackupFrequency.weekly:
-        // Due if more than 7 days since last backup
         return now.difference(lastBackup).inDays >= 7;
       case BackupFrequency.monthly:
-        // Due if different month or more than 30 days
         return (now.year != lastBackup.year || now.month != lastBackup.month);
     }
   }
@@ -364,7 +395,6 @@ class DriveService {
   Future<void> setAutoBackup(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_legacyAutoBackupKey, enabled);
-    // Also set daily backup
     await setBackupEnabled(BackupFrequency.daily, enabled);
   }
 
