@@ -6,10 +6,10 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'drive_service.dart';
 import 'auth_service.dart';
-// Note: Adapters generated
 import '../../data/models/milk_entry.dart';
 import '../../data/models/expense_entry.dart';
 
@@ -21,9 +21,12 @@ void callbackDispatcher() {
       await Hive.initFlutter();
 
       // Register Adapters
-      Hive.registerAdapter(MilkEntryAdapter());
-      Hive.registerAdapter(ExpenseEntryAdapter());
-      Hive.registerAdapter(ExpenseCategoryAdapter());
+      if (!Hive.isAdapterRegistered(0))
+        Hive.registerAdapter(MilkEntryAdapter());
+      if (!Hive.isAdapterRegistered(1))
+        Hive.registerAdapter(ExpenseEntryAdapter());
+      if (!Hive.isAdapterRegistered(2))
+        Hive.registerAdapter(ExpenseCategoryAdapter());
 
       final authService = AuthService();
       await authService.init();
@@ -57,13 +60,17 @@ class BackgroundService {
     tz.initializeTimeZones();
     try {
       final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
+      tz.setLocalLocation(tz.getLocation(timeZoneInfo));
     } catch (e) {
       debugPrint("Timezone initialization failed: $e");
     }
 
     // 2. Initialize Workmanager
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    try {
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    } catch (e) {
+      debugPrint("Workmanager initialization failed: $e");
+    }
 
     // 3. Initialize Local Notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -75,9 +82,7 @@ class BackgroundService {
           android: initializationSettingsAndroid,
           iOS: initializationSettingsIOS,
         );
-    await flutterLocalNotificationsPlugin.initialize(
-      settings: initializationSettings,
-    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   static Future<void> updateBackupTask(
@@ -112,15 +117,25 @@ class BackgroundService {
   }
 
   static Future<void> scheduleMilkReminders(bool hasEntryToday) async {
-    // Cancel all pending reminders
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final bool isEnabled = prefs.getBool('milk_reminder_enabled') ?? false;
+
+      // Cancel all pending reminders
       final pending = await flutterLocalNotificationsPlugin
           .pendingNotificationRequests();
       for (var req in pending) {
         if (req.id >= 100 && req.id <= 130) {
-          await flutterLocalNotificationsPlugin.cancel(id: req.id);
+          await flutterLocalNotificationsPlugin.cancel(req.id);
         }
       }
+
+      if (!isEnabled) {
+        return;
+      }
+
+      final int hour = prefs.getInt('milk_reminder_hour') ?? 20;
+      final int minute = prefs.getInt('milk_reminder_minute') ?? 0;
 
       final now = DateTime.now();
       for (int i = 0; i < 30; i++) {
@@ -130,8 +145,8 @@ class BackgroundService {
           targetDate.year,
           targetDate.month,
           targetDate.day,
-          20, // 8:00 PM
-          0,
+          hour,
+          minute,
         );
 
         // If scheduled time is in the past, skip
@@ -145,11 +160,11 @@ class BackgroundService {
         }
 
         await flutterLocalNotificationsPlugin.zonedSchedule(
-          id: 100 + i,
-          title: 'Milk Entry Reminder',
-          body: "Milk entry for today has not been recorded. Please update it.",
-          scheduledDate: scheduledTime,
-          notificationDetails: const NotificationDetails(
+          100 + i,
+          'Milk Entry Reminder',
+          "Please add today's milk entry.",
+          scheduledTime,
+          const NotificationDetails(
             android: AndroidNotificationDetails(
               'milk_reminder',
               'Milk Reminder',
@@ -158,6 +173,8 @@ class BackgroundService {
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
     } catch (e) {

@@ -4,8 +4,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/drive_service.dart';
 import '../../services/auth_service.dart';
 import '../../presentation/providers/theme_provider.dart';
+import '../../presentation/providers/dairy_provider.dart';
 import '../../services/background_service.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +28,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
   String? _loadingAction;
 
+  bool _reminderEnabled = false;
+  TimeOfDay? _reminderTime;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +38,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _driveService = DriveService(authService);
     _loadBackupSettings();
     _loadAppVersion();
+    _loadNotificationSettings();
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _reminderEnabled = prefs.getBool('milk_reminder_enabled') ?? false;
+      final int h = prefs.getInt('milk_reminder_hour') ?? 20;
+      final int m = prefs.getInt('milk_reminder_minute') ?? 0;
+      _reminderTime = TimeOfDay(hour: h, minute: m);
+    });
   }
 
   Future<void> _loadAppVersion() async {
@@ -320,6 +336,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_autoBackupEnabled) await _handleAutoBackupToggle(true);
   }
 
+  Future<void> _handleReminderToggle(bool enabled) async {
+    setState(() {
+      _reminderEnabled = enabled;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('milk_reminder_enabled', enabled);
+    _rescheduleReminders();
+  }
+
+  Future<void> _selectReminderTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime ?? const TimeOfDay(hour: 20, minute: 0),
+    );
+    if (picked != null) {
+      setState(() {
+        _reminderTime = picked;
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('milk_reminder_hour', picked.hour);
+      await prefs.setInt('milk_reminder_minute', picked.minute);
+      _rescheduleReminders();
+    }
+  }
+
+  void _rescheduleReminders() {
+    final provider = Provider.of<DairyProvider>(context, listen: false);
+    final now = DateTime.now();
+    bool hasToday = provider.allRecords.any(
+      (r) =>
+          r.date.year == now.year &&
+          r.date.month == now.month &&
+          r.date.day == now.day,
+    );
+    BackgroundService.scheduleMilkReminders(hasToday);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -380,7 +433,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 28),
 
-              // ─── Chat Backup Section ───
+              // ─── Notification Settings Section ───
+              _buildSectionHeader(
+                'Notifications',
+                Icons.notifications_active_outlined,
+              ),
+              const SizedBox(height: 12),
+              _buildSettingsCard(
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      title: const Text(
+                        'Daily Reminder',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Remind to add milk entry',
+                        style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                      value: _reminderEnabled,
+                      onChanged: _handleReminderToggle,
+                      activeColor: theme.primaryColor,
+                    ),
+                    if (_reminderEnabled) ...[
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        leading: Icon(
+                          Icons.access_time,
+                          color: theme.primaryColor,
+                        ),
+                        title: const Text('Reminder Time'),
+                        trailing: Text(
+                          _reminderTime != null
+                              ? _reminderTime!.format(context)
+                              : 'Select Time',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: theme.primaryColor,
+                          ),
+                        ),
+                        onTap: _selectReminderTime,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ─── Cloud Backup Section ───
               _buildSectionHeader('Cloud Backup', Icons.cloud_sync),
               const SizedBox(height: 12),
 
@@ -524,6 +639,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: theme.primaryColor,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Designed and Developed By Keerthivasan',
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : Colors.grey[500],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],

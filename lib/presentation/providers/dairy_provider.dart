@@ -136,7 +136,10 @@ class DairyProvider extends ChangeNotifier {
   /// Checks existing records for that month first, then falls back to current price.
   double _resolvePriceForMonth(DateTime date) {
     final sameMonthRecords = _allRecords.where(
-      (r) => r.date.year == date.year && r.date.month == date.month && r.pricePerLiter > 0,
+      (r) =>
+          r.date.year == date.year &&
+          r.date.month == date.month &&
+          r.pricePerLiter > 0,
     );
     if (sameMonthRecords.isNotEmpty) {
       return sameMonthRecords.first.pricePerLiter;
