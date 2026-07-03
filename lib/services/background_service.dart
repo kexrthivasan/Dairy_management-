@@ -85,6 +85,34 @@ class BackgroundService {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
+  static Future<bool> requestNotificationPermissions() async {
+    final androidImpl = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    if (androidImpl != null) {
+      final bool? granted = await androidImpl.requestNotificationsPermission();
+      await androidImpl.requestExactAlarmsPermission();
+      if (granted != null) return granted;
+    }
+
+    final iosImpl = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (iosImpl != null) {
+      final bool? granted = await iosImpl.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (granted != null) return granted;
+    }
+
+    return true;
+  }
+
   static Future<void> updateBackupTask(
     bool enabled,
     BackupFrequency? frequency,
@@ -172,7 +200,7 @@ class BackgroundService {
               priority: Priority.high,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );

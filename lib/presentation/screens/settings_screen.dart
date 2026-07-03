@@ -337,6 +337,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleReminderToggle(bool enabled) async {
+    if (enabled) {
+      final granted = await BackgroundService.requestNotificationPermissions();
+      if (!granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Notification permissions are required for reminders.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return; // do not enable
+      }
+    }
     setState(() {
       _reminderEnabled = enabled;
     });
