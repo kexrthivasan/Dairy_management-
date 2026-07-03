@@ -410,7 +410,7 @@ class ReportGenerator {
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
             ),
             pw.Text(
-              "Designed and developed by Keerthivasan",
+              "Designed and developed by Dairy Manager",
               style: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,

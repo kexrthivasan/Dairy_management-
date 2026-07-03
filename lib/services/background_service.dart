@@ -60,7 +60,7 @@ class BackgroundService {
     tz.initializeTimeZones();
     try {
       final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneInfo));
+      tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
     } catch (e) {
       debugPrint("Timezone initialization failed: $e");
     }

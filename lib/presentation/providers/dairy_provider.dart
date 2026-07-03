@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/milk_entry.dart';
 import '../../data/repositories/milk_repository.dart';
@@ -6,6 +7,13 @@ import '../../services/background_service.dart';
 
 class DairyProvider extends ChangeNotifier {
   final MilkRepository _repository = MilkRepository();
+
+  DairyProvider() {
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (!isTest) {
+      init();
+    }
+  }
 
   // Master list of all records
   List<MilkEntry> _allRecords = [];

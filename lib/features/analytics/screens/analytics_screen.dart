@@ -9,7 +9,6 @@ import '../widgets/monthly_bar_chart.dart';
 import '../widgets/morning_evening_chart.dart';
 import '../widgets/income_expense_chart.dart';
 import '../../../animations/cash_animation.dart';
-import '../../../presentation/widgets/footer_widget.dart'; // Fixed import
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -87,7 +86,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             // I should add it.
             const SizedBox(height: 24),
             const SizedBox(height: 32),
-            const AppFooter(),
           ],
         ),
       ),

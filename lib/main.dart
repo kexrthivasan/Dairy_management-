@@ -12,11 +12,19 @@ import 'presentation/screens/splash_screen.dart';
 import 'data/models/milk_entry.dart';
 import 'data/models/expense_entry.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load dotenv
-  await dotenv.load(fileName: ".env");
+  // Start initialization in background asynchronously
+  final initFuture = _initApp();
+
+  runApp(MyApp(initFuture: initFuture));
+}
+
+Future<Map<String, dynamic>> _initApp() async {
+  // Start loading dotenv and SharedPreferences in parallel
+  final dotenvFuture = dotenv.load(fileName: ".env");
+  final prefsFuture = SharedPreferences.getInstance();
 
   // Init Hive
   await Hive.initFlutter();
@@ -25,49 +33,76 @@ void main() async {
   if (!Hive.isAdapterRegistered(2))
     Hive.registerAdapter(ExpenseCategoryAdapter());
 
-  // Pre-open Hive boxes and SharedPreferences concurrently
-  final Future<void> hiveMilkFuture = Hive.openBox<MilkEntry>('milk_records')
-      .then((_) {})
-      .catchError((e) {
-        debugPrint('Hive preload error: $e');
-      });
-  final Future<void> hiveExpenseFuture =
-      Hive.openBox<ExpenseEntry>('expense_entries').then((_) {}).catchError((
-        e,
-      ) {
-        debugPrint('Hive preload error: $e');
-      });
+  // Pre-open Hive boxes concurrently
+  final milkOpenFuture = Hive.openBox<MilkEntry>('milk_records');
+  final expenseOpenFuture = Hive.openBox<ExpenseEntry>('expense_entries');
 
-  final prefs = await SharedPreferences.getInstance();
+  // Await everything at the end
+  await Future.wait([
+    dotenvFuture,
+    prefsFuture,
+    milkOpenFuture,
+    expenseOpenFuture,
+  ]);
+
+  final prefs = await prefsFuture;
   final isDarkModeSync = prefs.getBool('is_dark_mode') ?? false;
-
-  await Future.wait([hiveMilkFuture, hiveExpenseFuture]);
 
   final authService = AuthService();
 
-  runApp(MyApp(authService: authService, isDarkModeSync: isDarkModeSync));
+  return {'authService': authService, 'isDarkModeSync': isDarkModeSync};
 }
 
 class MyApp extends StatelessWidget {
-  final AuthService authService;
-  final bool isDarkModeSync;
+  final Future<Map<String, dynamic>>? initFuture;
+  final AuthService? authService;
+  final bool? isDarkModeSync;
 
   const MyApp({
     super.key,
-    required this.authService,
-    required this.isDarkModeSync,
+    this.initFuture,
+    this.authService,
+    this.isDarkModeSync,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (initFuture == null) {
+      // Legacy code path / testing fallback
+      final activeAuth = authService ?? AuthService();
+      final activeDark = isDarkModeSync ?? false;
+      return _buildAppContent(activeAuth, activeDark);
+    }
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          // Show splash or loading screen immediately
+          return const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: SplashScreen(isLoading: true),
+          );
+        }
+
+        final data = snapshot.data!;
+        final activeAuth = data['authService'] as AuthService;
+        final activeDark = data['isDarkModeSync'] as bool;
+
+        return _buildAppContent(activeAuth, activeDark);
+      },
+    );
+  }
+
+  Widget _buildAppContent(AuthService auth, bool isDark) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => DairyProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(initialDark: isDarkModeSync),
+          create: (_) => ThemeProvider(initialDark: isDark),
         ),
-        ChangeNotifierProvider.value(value: authService),
+        ChangeNotifierProvider.value(value: auth),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -77,7 +112,7 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: SplashScreen(authService: authService),
+            home: SplashScreen(authService: auth),
           );
         },
       ),

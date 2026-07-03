@@ -1,9 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../../data/models/expense_entry.dart';
 import '../../data/repositories/expense_repository.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   final ExpenseRepository _repository = ExpenseRepository();
+
+  ExpenseProvider() {
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (!isTest) {
+      init();
+    }
+  }
 
   // All loaded entries (unsorted or raw)
   List<ExpenseEntry> _allEntries = [];

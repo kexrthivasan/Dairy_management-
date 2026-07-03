@@ -9,9 +9,10 @@ import 'main_screen.dart';
 /// Dotenv + Hive are already initialized in main() before this widget loads,
 /// so we navigate to MainScreen right away with no blocking work here.
 class SplashScreen extends StatefulWidget {
-  final AuthService authService;
+  final AuthService? authService;
+  final bool isLoading;
 
-  const SplashScreen({super.key, required this.authService});
+  const SplashScreen({super.key, this.authService, this.isLoading = false});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -21,7 +22,17 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    if (!widget.isLoading) {
+      _initializeApp();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SplashScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isLoading && !widget.isLoading) {
+      _initializeApp();
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -40,9 +51,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Auth (signInSilently = network call) and background service run
     // completely in background AFTER navigation — never blocks UI
-    if (!isTest) {
+    if (!isTest && widget.authService != null) {
       Future.delayed(const Duration(milliseconds: 250), () {
-        widget.authService.init();
+        widget.authService!.init();
         BackgroundService.initialize();
       });
     }
