@@ -12,12 +12,16 @@ class ReportGenerator {
     required double pricePerLiter,
     required String periodLabel,
     bool isDownload = false,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final pdf = await _buildPdfDocument(
       milkRecords,
       expenseRecords,
       pricePerLiter,
       periodLabel,
+      startDate: startDate,
+      endDate: endDate,
     );
 
     final name =
@@ -37,15 +41,51 @@ class ReportGenerator {
     List<MilkEntry> milkRecords,
     List<ExpenseEntry> expenseRecords,
     double pricePerLiter,
-    String periodLabel,
-  ) async {
+    String periodLabel, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final pdf = pw.Document();
 
-    milkRecords.sort((a, b) => a.date.compareTo(b.date));
+    // Fill in missing dates if range is provided
+    List<MilkEntry> filledMilkRecords = [];
+    if (startDate != null && endDate != null) {
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      final end = DateTime(endDate.year, endDate.month, endDate.day);
 
-    double totalMilk = 0;
-    double totalIncome = 0;
-    for (var r in milkRecords) {
+      final Map<String, MilkEntry> existingMap = {
+        for (var r in milkRecords) DateFormat('yyyy-MM-dd').format(r.date): r,
+      };
+
+      var current = start;
+      while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+        final key = DateFormat('yyyy-MM-dd').format(current);
+        if (existingMap.containsKey(key)) {
+          filledMilkRecords.add(existingMap[key]!);
+        } else {
+          filledMilkRecords.add(
+            MilkEntry(
+              date: current,
+              morningMilk: 0.0,
+              eveningMilk: 0.0,
+              pricePerLiter: 0.0,
+              notes: '',
+              createdAt: current,
+            ),
+          );
+        }
+        current = current.add(const Duration(days: 1));
+      }
+    } else {
+      filledMilkRecords = List.from(milkRecords);
+    }
+
+    filledMilkRecords.sort((a, b) => a.date.compareTo(b.date));
+    expenseRecords.sort((a, b) => a.date.compareTo(b.date));
+
+    // Overall Totals
+    double totalMilk = 0, totalIncome = 0;
+    for (var r in filledMilkRecords) {
       totalMilk += r.totalYield;
       final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : pricePerLiter;
       totalIncome += r.totalYield * actualPrice;
@@ -53,34 +93,138 @@ class ReportGenerator {
     double totalExpense = expenseRecords.fold(0, (sum, e) => sum + e.amount);
     double netProfit = totalIncome - totalExpense;
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          return [
-            _buildHeader(periodLabel, pricePerLiter),
-            pw.SizedBox(height: 20),
-            _buildSummaryTable(totalMilk, totalIncome, totalExpense, netProfit),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              "Daily Details",
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
-            ),
-            pw.SizedBox(height: 10),
-            _buildMilkTable(milkRecords, pricePerLiter),
-            pw.SizedBox(height: 20),
-            _buildExpenseTable(expenseRecords),
-            pw.SizedBox(height: 20),
-            _buildFooter(),
-          ];
-        },
-      ),
-    );
+    // Grouping by Month (Format: yyyy-MM)
+    final Set<String> allMonths = {};
+    final Map<String, List<MilkEntry>> milkByMonth = {};
+    final Map<String, List<ExpenseEntry>> expenseByMonth = {};
+
+    for (var r in filledMilkRecords) {
+      final key = DateFormat('yyyy-MM').format(r.date);
+      allMonths.add(key);
+      milkByMonth.putIfAbsent(key, () => []).add(r);
+    }
+    for (var e in expenseRecords) {
+      final key = DateFormat('yyyy-MM').format(e.date);
+      allMonths.add(key);
+      expenseByMonth.putIfAbsent(key, () => []).add(e);
+    }
+
+    final sortedMonths = allMonths.toList()..sort();
+
+    bool isFirstPage = true;
+
+    if (sortedMonths.isEmpty) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              _buildHeader(periodLabel, pricePerLiter),
+              pw.SizedBox(height: 20),
+              pw.Text("No data available for the selected period."),
+            ];
+          },
+        ),
+      );
+      return pdf;
+    }
+
+    for (final monthKey in sortedMonths) {
+      final monthMilkRecords = milkByMonth[monthKey] ?? [];
+      final monthExpenseRecords = expenseByMonth[monthKey] ?? [];
+
+      double mMilk = 0, mIncome = 0;
+      for (var r in monthMilkRecords) {
+        mMilk += r.totalYield;
+        final actualPrice = r.pricePerLiter > 0
+            ? r.pricePerLiter
+            : pricePerLiter;
+        mIncome += r.totalYield * actualPrice;
+      }
+      double mExpense = monthExpenseRecords.fold(0, (sum, e) => sum + e.amount);
+      double mProfit = mIncome - mExpense;
+
+      // Get human readable month name
+      final monthDate = DateFormat('yyyy-MM').parse(monthKey);
+      final monthLabel = DateFormat('MMMM yyyy').format(monthDate);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            final widgets = <pw.Widget>[];
+
+            // Add Header only on the first page or change it to be per month.
+            if (isFirstPage) {
+              widgets.add(_buildHeader(periodLabel, pricePerLiter));
+              widgets.add(pw.SizedBox(height: 10));
+              widgets.add(
+                pw.Text(
+                  "Overall Summary",
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              );
+              widgets.add(pw.SizedBox(height: 10));
+              widgets.add(
+                _buildSummaryTable(
+                  totalMilk,
+                  totalIncome,
+                  totalExpense,
+                  netProfit,
+                ),
+              );
+              widgets.add(pw.SizedBox(height: 30));
+              isFirstPage = false;
+            }
+
+            // Month Title
+            widgets.add(
+              pw.Center(
+                child: pw.Text(
+                  "Month: $monthLabel",
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.green800,
+                  ),
+                ),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 10));
+            // Monthly Summary Table
+            widgets.add(_buildSummaryTable(mMilk, mIncome, mExpense, mProfit));
+            widgets.add(pw.SizedBox(height: 20));
+
+            widgets.add(
+              pw.Text(
+                "Daily Details - $monthLabel",
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 10));
+            widgets.add(_buildMilkTable(monthMilkRecords, pricePerLiter));
+            widgets.add(pw.SizedBox(height: 20));
+            widgets.add(_buildExpenseTable(monthExpenseRecords));
+            widgets.add(pw.SizedBox(height: 20));
+            widgets.add(_buildFooter());
+
+            return widgets;
+          },
+        ),
+      );
+    }
     return pdf;
   }
 
-  pw.Widget _buildHeader(String period, double price) {
+  pw.Widget _buildHeader(String period, double defaultPrice) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -100,7 +244,7 @@ class ReportGenerator {
           children: [
             pw.Text("Period: $period", style: const pw.TextStyle(fontSize: 14)),
             pw.Text(
-              "Price: Rs. $price / L",
+              "Default Price: Rs. $defaultPrice / L",
               style: const pw.TextStyle(fontSize: 14),
             ),
           ],
@@ -126,9 +270,9 @@ class ReportGenerator {
       data: [
         [
           milk.toStringAsFixed(1),
-          income.toStringAsFixed(1),
-          expense.toStringAsFixed(1),
-          profit.toStringAsFixed(1),
+          'Rs. ${income.toStringAsFixed(1)}',
+          'Rs. ${expense.toStringAsFixed(1)}',
+          'Rs. ${profit.toStringAsFixed(1)}',
         ],
       ],
       headerStyle: pw.TextStyle(
@@ -141,8 +285,8 @@ class ReportGenerator {
     );
   }
 
-  pw.Widget _buildMilkTable(List<MilkEntry> records, double price) {
-    if (records.isEmpty) return pw.Text("No milk records for this period.");
+  pw.Widget _buildMilkTable(List<MilkEntry> records, double defaultPrice) {
+    if (records.isEmpty) return pw.Text("No milk records for this month.");
 
     // Calculate totals
     double sumMilk = 0;
@@ -154,12 +298,12 @@ class ReportGenerator {
       sumMilk += r.totalYield;
       sumMorning += r.morningMilk;
       sumEvening += r.eveningMilk;
-      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : price;
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : defaultPrice;
       sumAmount += r.totalYield * actualPrice;
     }
 
     final data = records.map((r) {
-      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : price;
+      final actualPrice = r.pricePerLiter > 0 ? r.pricePerLiter : defaultPrice;
       final amount = r.totalYield * actualPrice;
       return [
         DateFormat('dd-MMM-yyyy').format(r.date),
