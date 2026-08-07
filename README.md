@@ -47,7 +47,7 @@ Follow these steps to set up the project locally:
 
 1. **Clone repository**
    ```bash
-   git clone https://github.com/yourusername/dairy-manager.git
+   git clone https://github.com/kexrthivasan/dairy-manager.git
    cd dairy-manager
    ```
 
