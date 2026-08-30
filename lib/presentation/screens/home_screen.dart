@@ -198,8 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
           final totalExpense = expenseProvider.getMonthlyTotal(now);
 
           final List<dynamic> combinedRecent = [];
-          combinedRecent.addAll(provider.allRecords);
-          combinedRecent.addAll(expenseProvider.allEntries);
+          combinedRecent.addAll(provider.allRecords.take(5));
+          combinedRecent.addAll(expenseProvider.allEntries.take(5));
           combinedRecent.sort((a, b) {
             final da = (a is MilkEntry) ? a.date : (a as ExpenseEntry).date;
             final db = (b is MilkEntry) ? b.date : (b as ExpenseEntry).date;

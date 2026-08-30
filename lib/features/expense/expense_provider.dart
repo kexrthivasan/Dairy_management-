@@ -38,6 +38,7 @@ class ExpenseProvider extends ChangeNotifier {
     notifyListeners();
 
     _allEntries = await _repository.getAllEntries();
+    _allEntries.sort((a, b) => b.date.compareTo(a.date));
 
     // Default: Show all, Sorted DESC
     _applyFilter((_) => true);
