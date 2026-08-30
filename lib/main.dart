@@ -8,6 +8,7 @@ import 'presentation/providers/dairy_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'features/expense/expense_provider.dart';
 import 'services/auth_service.dart';
+import 'services/background_service.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'data/models/milk_entry.dart';
 import 'data/models/expense_entry.dart';
@@ -43,6 +44,7 @@ Future<Map<String, dynamic>> _initApp() async {
     prefsFuture,
     milkOpenFuture,
     expenseOpenFuture,
+    BackgroundService.initialize(),
   ]);
 
   final prefs = await prefsFuture;

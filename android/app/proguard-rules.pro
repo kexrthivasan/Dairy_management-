@@ -32,4 +32,5 @@
 
 # General
 -keepattributes *Annotation*
+-keepattributes Signature
 -keepattributes SourceFile,LineNumberTable

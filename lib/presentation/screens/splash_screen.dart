@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../../services/background_service.dart';
 import 'main_screen.dart';
 
 /// Splash screen shown immediately on app launch.
@@ -49,12 +48,11 @@ class _SplashScreenState extends State<SplashScreen> {
       });
     }
 
-    // Auth (signInSilently = network call) and background service run
+    // Auth (signInSilently = network call) run
     // completely in background AFTER navigation — never blocks UI
     if (!isTest && widget.authService != null) {
       Future.delayed(const Duration(milliseconds: 250), () {
         widget.authService!.init();
-        BackgroundService.initialize();
       });
     }
   }
