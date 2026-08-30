@@ -8,6 +8,7 @@ import 'package:home_dairy_manager/presentation/screens/settings_screen.dart';
 import 'package:home_dairy_manager/services/drive_service.dart';
 import 'package:home_dairy_manager/services/auth_service.dart';
 import 'package:home_dairy_manager/services/backup_scheduler.dart';
+import 'package:home_dairy_manager/presentation/screens/lazy_indexed_stack.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -59,7 +60,7 @@ class _MainScreenState extends State<MainScreen> {
     final primary = theme.primaryColor;
 
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: LazyIndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1B1D1B) : Colors.white,
@@ -76,34 +77,50 @@ class _MainScreenState extends State<MainScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           child: NavigationBar(
             selectedIndex: _currentIndex,
-            onDestinationSelected: (index) => setState(() => _currentIndex = index),
+            onDestinationSelected: (index) =>
+                setState(() => _currentIndex = index),
             backgroundColor: isDark ? const Color(0xFF1B1D1B) : Colors.white,
             indicatorColor: primary.withOpacity(0.12),
             elevation: 0,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                icon: Icon(
+                  Icons.home_outlined,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
                 selectedIcon: Icon(Icons.home, color: primary),
                 label: 'Home',
               ),
               NavigationDestination(
-                icon: Icon(Icons.assessment_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                icon: Icon(
+                  Icons.assessment_outlined,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
                 selectedIcon: Icon(Icons.assessment, color: primary),
                 label: 'Reports',
               ),
               NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                icon: Icon(
+                  Icons.bar_chart_outlined,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
                 selectedIcon: Icon(Icons.bar_chart, color: primary),
                 label: 'Charts',
               ),
               NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                icon: Icon(
+                  Icons.calendar_month_outlined,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
                 selectedIcon: Icon(Icons.calendar_month, color: primary),
                 label: 'Summary',
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
                 selectedIcon: Icon(Icons.settings, color: primary),
                 label: 'Settings',
               ),
