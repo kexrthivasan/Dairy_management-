@@ -29,14 +29,6 @@ class _FullReportScreenState extends State<FullReportScreen> {
       text: dairyP.pricePerLiter.toStringAsFixed(0),
     );
 
-    // Update provider when text changes
-    _priceController.addListener(() {
-      final val = double.tryParse(_priceController.text);
-      if (val != null) {
-        dairyP.setPricePerLiter(val);
-      }
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyFilter('Last Month');
     });
@@ -190,24 +182,39 @@ class _FullReportScreenState extends State<FullReportScreen> {
           // 1. Controls (Filter & Price)
           Container(
             padding: const EdgeInsets.all(12),
-            color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
+            color:
+                Theme.of(context).cardTheme.color ??
+                Theme.of(context).cardColor,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Report Filter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const Text(
+                      'Report Filter',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                     PopupMenuButton<String>(
                       initialValue: _currentFilter,
                       onSelected: (value) => _handleRadioChange(value),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.08),
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Theme.of(context).primaryColor.withOpacity(0.2),
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.2),
                           ),
                         ),
                         child: Row(
@@ -221,30 +228,74 @@ class _FullReportScreenState extends State<FullReportScreen> {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).primaryColor),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              size: 20,
+                              color: Theme.of(context).primaryColor,
+                            ),
                           ],
                         ),
                       ),
                       itemBuilder: (context) => [
-                        const PopupMenuItem(value: 'Today', child: Text('Today')),
-                        const PopupMenuItem(value: 'This Week', child: Text('This Week')),
-                        const PopupMenuItem(value: 'This Month', child: Text('This Month')),
-                        const PopupMenuItem(value: 'Last Month', child: Text('Last Month')),
-                        const PopupMenuItem(value: 'Custom Range', child: Text('Custom Range')),
+                        const PopupMenuItem(
+                          value: 'Today',
+                          child: Text('Today'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'This Week',
+                          child: Text('This Week'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'This Month',
+                          child: Text('This Month'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Last Month',
+                          child: Text('Last Month'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Custom Range',
+                          child: Text('Custom Range'),
+                        ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Price Input
                 TextField(
                   controller: _priceController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
+                  onSubmitted: (val) {
+                    final price = double.tryParse(val);
+                    if (price != null) {
+                      dairyP.setPricePerLiter(price);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Price updated successfully'),
+                        ),
+                      );
+                    }
+                  },
+                  decoration: InputDecoration(
                     labelText: 'Cost / Liter (Modified Manually)',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     prefixText: 'Rs. ',
-                    contentPadding: EdgeInsets.symmetric(
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.check_circle, color: Colors.green),
+                      onPressed: () {
+                        final val = double.tryParse(_priceController.text);
+                        if (val != null) {
+                          dairyP.setPricePerLiter(val);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Price updated successfully'),
+                            ),
+                          );
+                          FocusScope.of(context).unfocus();
+                        }
+                      },
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
@@ -673,8 +724,6 @@ class _FullReportScreenState extends State<FullReportScreen> {
     );
   }
 }
-
-
 
 class _ExpenseCard extends StatelessWidget {
   final ExpenseEntry entry;

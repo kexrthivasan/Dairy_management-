@@ -510,7 +510,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       dayLabel[i] = DateFormat('dd/MM').format(r.date);
     }
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,7 +535,6 @@ class _ReportsScreenState extends State<ReportsScreen>
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
                         int idx = value.toInt();
-                        // Show labels occasionally to avoid clutter
                         int interval = (sorted.length / 5).ceil();
                         if (interval == 0) interval = 1;
                         if (idx % interval == 0 && dayLabel.containsKey(idx)) {
@@ -572,30 +571,31 @@ class _ReportsScreenState extends State<ReportsScreen>
           const SizedBox(height: 24),
           Text('Daily Log List', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: sorted.length,
-            itemBuilder: (context, index) {
-              final r = sorted[sorted.length - 1 - index]; // show latest first
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.blue.withOpacity(0.1),
-                  child: const Icon(Icons.water_drop, color: Colors.blue),
-                ),
-                title: Text(DateFormat('dd MMMM yyyy').format(r.date)),
-                subtitle: Text(
-                  'Morning: ${r.morningMilk}L — Evening: ${r.eveningMilk}L',
-                ),
-                trailing: Text(
-                  '${r.totalYield.toStringAsFixed(1)} L',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+          Expanded(
+            child: ListView.builder(
+              itemCount: sorted.length,
+              itemBuilder: (context, index) {
+                final r =
+                    sorted[sorted.length - 1 - index]; // show latest first
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.withOpacity(0.1),
+                    child: const Icon(Icons.water_drop, color: Colors.blue),
                   ),
-                ),
-              );
-            },
+                  title: Text(DateFormat('dd MMMM yyyy').format(r.date)),
+                  subtitle: Text(
+                    'Morning: ${r.morningMilk}L — Evening: ${r.eveningMilk}L',
+                  ),
+                  trailing: Text(
+                    '${r.totalYield.toStringAsFixed(1)} L',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -678,7 +678,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       );
     });
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,29 +713,29 @@ class _ReportsScreenState extends State<ReportsScreen>
           const SizedBox(height: 24),
           Text('Recent Expense Logs', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: expenses.length,
-            itemBuilder: (context, index) {
-              final e = expenses[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.red.shade50,
-                  child: Icon(Icons.money_off, color: Colors.red.shade700),
-                ),
-                title: Text(labels[e.category]!),
-                subtitle: Text(DateFormat('dd MMMM yyyy').format(e.date)),
-                trailing: Text(
-                  '-₹${e.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                    fontSize: 16,
+          Expanded(
+            child: ListView.builder(
+              itemCount: expenses.length,
+              itemBuilder: (context, index) {
+                final e = expenses[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.red.shade50,
+                    child: Icon(Icons.money_off, color: Colors.red.shade700),
                   ),
-                ),
-              );
-            },
+                  title: Text(labels[e.category]!),
+                  subtitle: Text(DateFormat('dd MMMM yyyy').format(e.date)),
+                  trailing: Text(
+                    '-₹${e.amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                      fontSize: 16,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
